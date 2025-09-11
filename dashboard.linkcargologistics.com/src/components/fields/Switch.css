@@ -1,0 +1,14 @@
+/* styles.css */
+.toggle-checkbox:checked {
+    right: 0;
+    border-color: #422afb;
+  }
+  
+  .toggle-checkbox:checked + .toggle-label {
+    background-color: #422afb;
+  }
+  
+  .toggle-checkbox:checked + .toggle-label::before {
+    transform: translateX(4px);
+  }
+  

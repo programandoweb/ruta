@@ -1,0 +1,18 @@
+/* Para tabletas (ejemplo: pantallas de entre 640px y 1024px de ancho) */
+@media (min-width: 640px) and (max-width: 1024px) {
+    .openDrawer {
+        width: 40vh;
+    }
+}
+
+/* Para celulares (ejemplo: pantallas de hasta 639px de ancho) */
+@media (max-width: 639px) {
+    .openDrawer {
+        width: 40vh;
+    }
+}
+
+/* Clase por defecto */
+.openDrawer {
+    width:80vh;
+}

@@ -1,0 +1,95 @@
+'use client'
+import { useState } from "react"
+import { FiDollarSign, FiPrinter } from "react-icons/fi"
+import { formatearMonto } from "@/utils/fuctions"
+
+const formatearFecha = (fecha: string | undefined) => {
+  if (!fecha) return ""
+  const date = new Date(fecha)
+  return date.toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+}
+
+interface Props {
+  groupByDesc: Record<string, { total: number; status: string; fecha: string }>
+  handlePayGroup: (desc: string) => void
+  handlePrintGroup: (desc: string) => void
+}
+
+const TotalsByPerson: React.FC<Props> = ({ groupByDesc, handlePayGroup, handlePrintGroup }) => {
+  const [confirmIndex, setConfirmIndex] = useState<string | null>(null)
+
+  return (
+    <div className="bg-gray-100 p-3 rounded-lg shadow-inner">
+      <h3 className="font-semibold text-gray-700 mb-2">Totales por persona</h3>
+      <ul className="space-y-2">
+        {Object.entries(groupByDesc).map(([desc, data], idx) => (
+          <li
+            key={idx}
+            className="flex justify-between items-center text-sm bg-white p-2 rounded shadow-sm"
+          >
+            <div className="flex flex-col">
+              <span className="text-gray-600">{desc}</span>
+              <span
+                className={`text-xs font-bold ${
+                  data.status === "Pagada" ? "text-green-600" : "text-gray-500"
+                }`}
+              >
+                {data.status} • {formatearFecha(data.fecha)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-blue-700">
+                ${formatearMonto(data.total || 0)}
+              </span>
+
+              {/* 👉 Confirmación Sí / No para pagar */}
+              {data.status !== "Pagada" &&
+                (confirmIndex === desc ? (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => {
+                        handlePayGroup(desc)
+                        setConfirmIndex(null)
+                      }}
+                      className="bg-green-600 text-white px-2 py-1 rounded text-xs"
+                    >
+                      Sí
+                    </button>
+                    <button
+                      onClick={() => setConfirmIndex(null)}
+                      className="bg-gray-400 text-white px-2 py-1 rounded text-xs"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmIndex(desc)}
+                    className="bg-green-600 text-white p-2 rounded-full hover:bg-green-700"
+                  >
+                    <FiDollarSign size={16} />
+                  </button>
+                ))}
+
+              <button
+                onClick={() => handlePrintGroup(desc)}
+                className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700"
+              >
+                <FiPrinter size={16} />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+export default TotalsByPerson

@@ -1,0 +1,101 @@
+php artisan migrate:fresh --seed
+
+php artisan make:model Condominiums -m
+php artisan make:model Properties -m
+php artisan make:model RelUsersAndCondominiums -m
+php artisan make:controller V1/Users/UsersController --resource
+php artisan make:controller V1/Users/UserCharacteristicsController --resource
+php artisan make:controller V1/Users/UserAccountController --resource
+php artisan make:model UsersSuscriptions -m
+php artisan make:model UserCharacteristics -m
+
+php artisan make:model Business -m
+php artisan make:model BusinessGallery -m
+php artisan make:migration add_price_to_servicios_table --table=servicios
+
+
+php artisan make:model Orders -m
+
+php artisan make:controller V1/Orders/OrdersController --resource
+
+php artisan make:model Coupons -m
+php artisan make:controller V1/Coupons/CouponsController --resource
+
+php artisan make:controller V1/Providers/ProvidersController --resource
+
+php artisan make:model Events -m
+php artisan make:model EventItems -m
+php artisan make:model EventInvitation -m
+php artisan make:model EventSchedule -m
+php artisan make:controller V1/Events/EventsController --resource
+php artisan make:controller V1/Events/EventInvitationController --resource
+
+php artisan make:controller V1/Notification/NotificationController --resource
+
+
+php artisan make:model Notification -m
+
+
+php artisan make:model Products -m
+php artisan make:model ProductsStock -m
+
+
+php artisan make:model CalendarAvailabilities  -m
+php artisan make:model CalendarSlots  -m
+
+
+php artisan make:controller V1/Calendar/CalendarAvailabilitiesController --resource
+
+
+php artisan make:controller V1/Products/CategoriesController --resource
+php artisan make:model ProductsCategory -m
+
+
+php artisan make:controller V1/Users/EmployeesController --resource
+
+
+php artisan make:model CalendarSlotAttention -m
+
+
+php artisan make:controller V1/Summary/SummaryController
+
+
+php artisan make:model EventTask -m
+php artisan make:controller V1/Events/EventTasksController --resource
+
+
+php artisan make:model EventOrder -m
+
+php artisan make:controller V1/Events/EventOrdersController --resource
+
+
+php artisan make:controller V1/Business/BusinessController --resource
+
+php artisan make:controller V1/Inventory/InventoryController --resource
+php artisan make:controller V1/Inventory/RawMaterialsController --resource
+
+php artisan make:controller V1/Inventory/CategoriesController --resource
+php artisan make:controller V1/Inventory/MovementsController --resource
+php artisan make:controller V1/Reports/ReportsController
+
+php artisan make:model ProductsItem -m
+php artisan make:model InventoryCategories -m
+
+php artisan make:controller V1/Menu/MenuController
+
+php artisan make:controller V1/Forum/ForumController
+
+
+
+php artisan make:model Order -m
+php artisan make:model OrderItem -m
+php artisan make:model OrderPaid -m
+
+
+php artisan make:model CashShift -m
+php artisan make:model CashMovement -m
+
+
+php artisan make:controller V1/Order/OrdersController --resource
+
+php artisan make:controller V1/Cash/CashController --resource
