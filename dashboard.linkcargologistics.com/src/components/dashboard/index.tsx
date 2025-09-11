@@ -2,8 +2,6 @@
 
 import { FC } from 'react'
 import useFormData from '@/hooks/useFormDataNew' // Asumo que este hook se sigue utilizando para otras funcionalidades del dashboard
-import WeeklyCalendar from '../calendar/WeeklyCalendar'
-import FoodMesas from '../menu/FoodMesas'
 
 const DashboardHomePage: FC = () => {
   // Se eliminan todos los estados relacionados con la búsqueda
@@ -27,8 +25,7 @@ const DashboardHomePage: FC = () => {
       </h1>
       <p className="text-center text-gray-600 mt-0">
         Aquí podrás ver la información general de tu panel.        
-      </p>    
-      <FoodMesas/> 
+      </p>          
     </div>
   )
 }

@@ -88,53 +88,82 @@ class ServicesTableSeeder extends Seeder
         
         
         
-        // Busca un usuario cualquiera (o crea uno por defecto)
-        $user = User::factory()->create([
-            'name' => 'Jorge Méndez',
-            'email' => 'lic.jorgemendez@gmail.com',
-            'password' => bcrypt('12345678'),
-        ]);
+        // SUPER ADMIN
+        $superAdmin = User::firstOrCreate(
+            ['email' => 'superadmin@programandoweb.net'],
+            [
+                'name'     => 'Super Admin',
+                'password' => bcrypt('password'),
+            ]
+        );
+        $role = Role::where('name', 'super-admin')->where('guard_name', 'api')->first();
+        if ($role) {
+            $superAdmin->assignRole($role);
+        }
 
-        $user_2 =   $user = User::factory()->create([
-            'name'              => 'Salón de Eventos La Estancia',
-            'email'             => Str::slug('Salón de Eventos La Estancia', '_').'@proveedores.com',
-            'password' => bcrypt('password'),
-        ],);
+        // ADMIN
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@programandoweb.net'],
+            [
+                'name'     => 'Administrador General',
+                'password' => bcrypt('password'),
+            ]
+        );
+        $role = Role::where('name', 'admin')->where('guard_name', 'api')->first();
+        if ($role) {
+            $admin->assignRole($role);
+        }
 
+        // CLIENTE
+        $client = User::firstOrCreate(
+            ['email' => 'cliente@programandoweb.net'],
+            [
+                'name'     => 'Cliente Ejemplo',
+                'password' => bcrypt('password'),
+            ]
+        );
+        $role = Role::where('name', 'clients')->where('guard_name', 'api')->first();
+        if ($role) {
+            $client->assignRole($role);
+        }
+
+        // PROVEEDOR
+        $provider = User::firstOrCreate(
+            ['email' => 'proveedor@programandoweb.net'],
+            [
+                'name'     => 'Proveedor Transporte',
+                'password' => bcrypt('password'),
+            ]
+        );
         $role = Role::where('name', 'providers')->where('guard_name', 'api')->first();
-
         if ($role) {
-            $user->assignRole($role);
+            $provider->assignRole($role);
         }
 
-        $user = User::factory()->create([
-            'customer_group_id' =>  $user_2->id,
-            'company_name'      =>  $user_2->name,
-            'name'              =>  'Manager La Estancia',
-            'email'             =>  Str::slug('Manager La Estancia', '_').'@proveedores.com',
-            'password'          =>  bcrypt('password'),
-        ],);
-
-        $role       =   Role::where('name', 'managers')->where('guard_name', 'api')->first();
-
+        // MANAGER (ej. coordinador de rutas)
+        $manager = User::firstOrCreate(
+            ['email' => 'manager@programandoweb.net'],
+            [
+                'name'     => 'Manager Rutas',
+                'password' => bcrypt('password'),
+            ]
+        );
+        $role = Role::where('name', 'managers')->where('guard_name', 'api')->first();
         if ($role) {
-            $user->assignRole($role);
+            $manager->assignRole($role);
         }
 
-
-
-        $user = User::factory()->create([
-            'customer_group_id' =>  $user_2->id,
-            'company_name'      =>  $user_2->name,
-            'name'              =>  'Empleado La Estancia',
-            'email'             =>  Str::slug('Empleado La Estancia', '_').'@proveedores.com',
-            'password'          =>  bcrypt('password'),
-        ],);
-
-        $role       =   Role::where('name', 'employees')->where('guard_name', 'api')->first();
-
+        // EMPLOYEE (ej. transportista)
+        $employee = User::firstOrCreate(
+            ['email' => 'transportista@programandoweb.net'],
+            [
+                'name'     => 'Transportista',
+                'password' => bcrypt('password'),
+            ]
+        );
+        $role = Role::where('name', 'employees')->where('guard_name', 'api')->first();
         if ($role) {
-            $user->assignRole($role);
+            $employee->assignRole($role);
         }
             
 

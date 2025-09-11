@@ -6,7 +6,7 @@
  *  Correo: lic.jorgemendez@gmail.com
  *  Celular: 3115000926
  *  Website: Programandoweb.net
- *  Proyecto: Ivoolve
+ *  Proyecto: Ivoolve - Sistema de Rutas
  * ---------------------------------------------------
  */
 
@@ -27,45 +27,19 @@ class PermissionsSeeder extends Seeder
         $permissions = [
             'home_index',
 
-            // Inventario
-            'create_inventory',
-            'read_inventory',
-            'update_inventory',
-            'delete_inventory',
+            // Rutas
+            'create_routes',
+            'read_routes',
+            'update_routes',
+            'delete_routes',
+            'manage_routes',
 
-            // Insumos
-            'create_raw_materials',
-            'read_raw_materials',
-            'update_raw_materials',
-            'delete_raw_materials',
-
-            // Entradas y salidas
-            'create_entries',
-            'read_entries',
-            'create_exits',
-            'read_exits',
-            'adjust_stock',
-
-            // Recetas
-            'create_recipes',
-            'read_recipes',
-            'update_recipes',
-            'delete_recipes',
-
-            // Ventas
-            'create_sales',
-            'read_sales',
-            'update_sales',
-            'delete_sales',
-
-            // Reportes
-            'read_reports',
-
-            // Proveedores
-            'create_providers',
-            'read_providers',
-            'update_providers',
-            'delete_providers',
+            // Seguimiento
+            'create_tracking',
+            'read_tracking',
+            'update_tracking',
+            'delete_tracking',
+            'manage_tracking',
 
             // Configuración
             'read_settings',
@@ -98,19 +72,8 @@ class PermissionsSeeder extends Seeder
                 $role->syncPermissions([
                     'home_index',
 
-                    'create_inventory', 'read_inventory', 'update_inventory', 'delete_inventory',
-                    'create_raw_materials', 'read_raw_materials', 'update_raw_materials', 'delete_raw_materials',
-                    'create_entries', 'read_entries',
-                    'create_exits', 'read_exits',
-                    'adjust_stock',
-
-                    'create_recipes', 'read_recipes', 'update_recipes', 'delete_recipes',
-
-                    'create_sales', 'read_sales', 'update_sales', 'delete_sales',
-
-                    'read_reports',
-
-                    'create_providers', 'read_providers', 'update_providers', 'delete_providers',
+                    'create_routes', 'read_routes', 'update_routes', 'delete_routes', 'manage_routes',
+                    'create_tracking', 'read_tracking', 'update_tracking', 'delete_tracking', 'manage_tracking',
 
                     'read_settings', 'update_settings',
 
@@ -118,45 +81,20 @@ class PermissionsSeeder extends Seeder
                 ]);
             } elseif ($roleName === 'managers') {
                 $role->syncPermissions([
-                    'create_inventory', 'read_inventory', 'update_inventory',
-                    'create_raw_materials', 'read_raw_materials', 'update_raw_materials',
-                    'create_entries', 'read_entries',
-                    'create_exits', 'read_exits',
-                    'adjust_stock',
+                    'read_routes', 'create_routes', 'update_routes',
+                    'read_tracking', 'update_tracking',
 
-                    'create_recipes', 'read_recipes', 'update_recipes',
-
-                    'create_sales', 'read_sales',
-
-                    'read_reports',
-
-                    'read_providers',
-
-                    'read_settings', 'update_settings',
+                    'read_settings',
                 ]);
             } elseif ($roleName === 'employees') {
                 $role->syncPermissions([
-                    'read_inventory',
-                    'read_raw_materials',
-                    'create_exits', 'read_exits',
-                    'read_recipes',
-                    'create_sales', 'read_sales',
-                ]);
-            } elseif ($roleName === 'providers') {
-                $role->syncPermissions([
-                    'read_raw_materials',
-                    'read_inventory',
-                    'read_entries',
-                    'read_exits',
-                    'read_reports',
-                    'read_providers',
-                    'read_settings',
+                    'read_routes',
+                    'read_tracking', 'update_tracking',
                 ]);
             } elseif ($roleName === 'clients') {
                 $role->syncPermissions([
-                    'read_inventory',
-                    'read_raw_materials',
-                    'read_sales',
+                    'read_routes',
+                    'read_tracking',
                 ]);
             }
         }
