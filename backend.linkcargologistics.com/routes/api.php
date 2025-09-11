@@ -30,6 +30,7 @@ Route::middleware([ImagesRoute::class])->group(function () {
             require __DIR__ . '/inventory/api.php';
             require __DIR__ . '/reports/api.php';
             require __DIR__ . '/cash/api.php';
+            require __DIR__ . '/routes/api.php';
         });
         
     });

@@ -99,3 +99,8 @@ php artisan make:model CashMovement -m
 php artisan make:controller V1/Order/OrdersController --resource
 
 php artisan make:controller V1/Cash/CashController --resource
+
+
+php artisan make:model Routes -m
+php artisan make:model RouteItem -m
+php artisan make:controller V1/Routes/RoutesController --resource

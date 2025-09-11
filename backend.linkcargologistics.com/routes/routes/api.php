@@ -1,0 +1,38 @@
+<?php
+
+/**
+ * ---------------------------------------------------
+ *  Desarrollado por: Jorge Méndez - Programandoweb
+ *  Correo: lic.jorgemendez@gmail.com
+ *  Celular: 3115000926
+ *  website: Programandoweb.net
+ *  Proyecto: Ivoolve
+ * ---------------------------------------------------
+ */
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\V1\Routes\RoutesController;
+use App\Http\Controllers\V1\Routes\RouteItemsController;
+
+// 🔹 Reportes (ejemplo existente)
+Route::get('/dashboard/reports/inventory-status', [RoutesController::class, 'inventory_status']);
+
+// 🔹 CRUD de rutas
+Route::prefix('routes')->group(function () {
+    Route::get('/', [RoutesController::class, 'index']);
+    Route::post('/', [RoutesController::class, 'store']);
+    Route::get('/{id}', [RoutesController::class, 'show']);
+    Route::put('/{id}', [RoutesController::class, 'update']);
+    Route::delete('/{id}', [RoutesController::class, 'destroy']);
+
+    // 🔹 Importar items de ruta vía Excel
+    Route::post('/import-excel', [RouteItemsController::class, 'importExcel']);
+
+    // 🔹 CRUD de items dentro de una ruta
+    Route::get('/{route_id}/items', [RouteItemsController::class, 'index']);
+    Route::post('/{route_id}/items', [RouteItemsController::class, 'store']);
+    Route::get('/{route_id}/items/{id}', [RouteItemsController::class, 'show']);
+    Route::put('/{route_id}/items/{id}', [RouteItemsController::class, 'update']);
+    Route::delete('/{route_id}/items/{id}', [RouteItemsController::class, 'destroy']);
+});
