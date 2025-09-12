@@ -47,18 +47,46 @@ const CSRRouteImportComponent: React.FC = () => {
     setLoading(true);
 
     try {
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const token = user?.token || null;
+
       const form = new FormData();
       form.append("file", file);
 
-      const res = await formData.handleRequest(
-        formData.backend + "/routes/import-excel", // 🔹 Ajusta esta ruta a tu backend
-        "post",
-        form,
-        true
-      );
+      // Construcción del BACKEND igual que en tu ejemplo de UploadWithImage
+      let BACKEND = "";
+      if (window && window.location && window.location.hostname) {
+        BACKEND = `${window.location.protocol}//${window.location.hostname}`;
+        if (window.location.port) {
+          BACKEND += `:${process.env.NEXT_PUBLIC_PORT}`;
+        }
+        BACKEND += process.env.NEXT_PUBLIC_VERSION || "/api/v1";
+      }
 
-      if (res?.items) {
-        setItems(res.items);
+      if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+        BACKEND =
+          process.env.NEXT_PUBLIC_BACKEND_URL + process.env.NEXT_PUBLIC_VERSION;
+      }
+
+      const response = await fetch(BACKEND + "/routes/import-excel", {
+        method: "POST",
+        body: form,
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const responseData = await response.json();
+
+      console.log(responseData?.data?.items)
+
+      if (responseData?.data?.items) {
+        setItems(responseData?.data?.items);
       }
     } catch (err) {
       console.error("Error al subir archivo:", err);
@@ -66,6 +94,7 @@ const CSRRouteImportComponent: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   const handleAddManual = () => {
     setItems((prev) => [...prev, { ...newItem }]);
