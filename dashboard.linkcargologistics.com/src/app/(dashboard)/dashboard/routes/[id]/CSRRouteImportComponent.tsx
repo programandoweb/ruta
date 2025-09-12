@@ -11,19 +11,16 @@
  */
 
 import { useState } from "react";
-import {
-  MdFileUpload,
-  MdTableChart,
-  MdAddCircle,
-  MdDelete,
-} from "react-icons/md";
+import { MdFileUpload, MdAddCircle, MdDelete } from "react-icons/md";
 import Card from "@/components/card";
-import useFormData from "@/hooks/useFormDataNew";
 
-const CSRRouteImportComponent: React.FC = () => {
-  const formData = useFormData(false, false, false);
+interface Props {
+  items: any[];
+  setItems: React.Dispatch<React.SetStateAction<any[]>>;
+}
+
+const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Estado para agregar manualmente
@@ -54,7 +51,6 @@ const CSRRouteImportComponent: React.FC = () => {
       const form = new FormData();
       form.append("file", file);
 
-      // Construcción del BACKEND igual que en tu ejemplo de UploadWithImage
       let BACKEND = "";
       if (window && window.location && window.location.hostname) {
         BACKEND = `${window.location.protocol}//${window.location.hostname}`;
@@ -83,10 +79,8 @@ const CSRRouteImportComponent: React.FC = () => {
 
       const responseData = await response.json();
 
-      console.log(responseData?.data?.items)
-
       if (responseData?.data?.items) {
-        setItems(responseData?.data?.items);
+        setItems(responseData.data.items);
       }
     } catch (err) {
       console.error("Error al subir archivo:", err);
@@ -94,7 +88,6 @@ const CSRRouteImportComponent: React.FC = () => {
       setLoading(false);
     }
   };
-
 
   const handleAddManual = () => {
     setItems((prev) => [...prev, { ...newItem }]);

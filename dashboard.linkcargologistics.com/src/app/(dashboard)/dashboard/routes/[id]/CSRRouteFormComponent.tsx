@@ -12,7 +12,7 @@
 
 import Card from "@/components/card";
 import useFormData from "@/hooks/useFormDataNew";
-import { useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MdSwapHoriz } from "react-icons/md";
 
@@ -33,8 +33,26 @@ const CSRRouteFormComponent: React.FC<any> = () => {
     origin_address: "Cra 15 #23-45, Bogotá",
     destination_address: "Calle 50 #10-20, Medellín",
     type: "deliver", // deliver = dejar caja, pickup = recoger caja
-    });
+  });
 
+  const [items, setItems]   =   useState<any>([])
+
+  const getInit = () => {
+    formData
+      .handleRequest(formData.backend + location.pathname)
+      .then((response: any) => {
+        if (response && response[prefixed]) {
+          // Update form inputs with fetched data if it exists under the prefix
+          setInputs(response[prefixed]);         
+        }        
+        if (response && response[prefixed] && response[prefixed].items) {
+          // Update form inputs with fetched data if it exists under the prefix
+          setItems(response[prefixed].items);         
+        }        
+      });
+  };
+  
+  useEffect(getInit, []);
 
   const onSubmit = (e: any) => {
     e.preventDefault();
@@ -42,9 +60,10 @@ const CSRRouteFormComponent: React.FC<any> = () => {
       .handleRequest(
         formData.backend + location.pathname,
         inputs.id ? "put" : "post",
-        { ...inputs }
+        { ...inputs,items }
       )
       .then((res: any) => {
+        setInputs(res[prefixed])
         if (!inputs.id && res[prefixed]?.id) {
           router.replace("/dashboard/routes/" + res[prefixed]?.id);
         } else {
@@ -52,6 +71,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
         }
       });
   };
+
+  
 
   return (
     <div className="mt-5 grid h-full grid-cols-1 gap-5">
@@ -64,10 +85,16 @@ const CSRRouteFormComponent: React.FC<any> = () => {
               <MdSwapHoriz className="text-blue-600 text-2xl" />
               Formulario de Ruta
             </h2>
-
+      
             <RouteFormFields inputs={inputs} setInputs={setInputs} />
-            <CSRRouteImportComponent/>
-            <RouteFormActions />
+            {
+              inputs?.id&&(
+                <Fragment>
+                  <CSRRouteImportComponent items={items} setItems={setItems}/>
+                  <RouteFormActions />
+                </Fragment>
+              )
+            }            
           </div>
         </Card>
       </form>

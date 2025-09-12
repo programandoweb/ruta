@@ -25,15 +25,26 @@ return new class extends Migration
             $table->increments('id');
 
             // Relación con usuario creador (opcional)
-            $table->integer('user_id')->unsigned()->nullable();
-            $table->foreign('user_id')->on('users')->references('id')->onDelete('set null');
+            $table->unsignedInteger('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
 
             // Nombre de la ruta (opcional)
             $table->string('name')->nullable();
 
+            // Celular
+            $table->string('phone', 20)->nullable();
+
+            // Dirección de origen
+            $table->string('origin_address');
+
+            // Dirección de destino
+            $table->string('destination_address');
+
+            // Tipo de movimiento (deliver, pickup)
+            $table->enum('type', ['deliver', 'pickup']);
+
             // Fecha programada
             $table->date('date')->nullable();
-            
 
             $table->timestamps();
         });

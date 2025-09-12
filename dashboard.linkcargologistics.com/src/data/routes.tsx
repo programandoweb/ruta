@@ -37,7 +37,7 @@ const routes = [
       {
         name: "Mis rutas",
         layout: "/dashboard",
-        path: "/dashboard/routes/list",
+        path: "/dashboard/routes",
         permission: "manage_routes",
       },
     ],

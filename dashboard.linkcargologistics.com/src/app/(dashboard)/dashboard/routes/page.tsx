@@ -3,7 +3,7 @@ import ColumnsTable from "@/components/tables/ColumnsTable";
 
 import React from "react";
 const  title:string     =   "Categorías"
-const   alias:string    =   'products';
+const   alias:string    =   'routes';
 
 export const metadata: Metadata = {
   title: 'Dashboard - '+title+' - '+process.env.NEXT_PUBLIC_NAME,

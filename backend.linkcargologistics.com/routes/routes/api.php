@@ -19,16 +19,18 @@ use App\Http\Controllers\V1\Routes\RouteItemsController;
 Route::get('/dashboard/reports/inventory-status', [RoutesController::class, 'inventory_status']);
 
 // 🔹 CRUD de rutas
-Route::prefix('routes')->group(function () {
+Route::prefix('dashboard/routes')->group(function () {
     Route::get('/', [RoutesController::class, 'index']);
-    Route::post('/', [RoutesController::class, 'store']);
+    Route::post('/new', [RoutesController::class, 'store']);
     Route::get('/{id}', [RoutesController::class, 'show']);
     Route::put('/{id}', [RoutesController::class, 'update']);
     Route::delete('/{id}', [RoutesController::class, 'destroy']);
+});
 
+
+Route::prefix('routes')->group(function () {
     // 🔹 Importar items de ruta vía Excel
     Route::post('/import-excel', [RouteItemsController::class, 'importExcel']);
-
     // 🔹 CRUD de items dentro de una ruta
     Route::get('/{route_id}/items', [RouteItemsController::class, 'index']);
     Route::post('/{route_id}/items', [RouteItemsController::class, 'store']);
