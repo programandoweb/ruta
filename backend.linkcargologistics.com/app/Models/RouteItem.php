@@ -29,6 +29,7 @@ class RouteItem extends Model
         'destination_address',
         'type',
         'status',
+        'guide'
     ];
 
     /**

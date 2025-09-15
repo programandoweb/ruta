@@ -1,0 +1,191 @@
+"use client";
+
+/**
+ * ---------------------------------------------------
+ *  Desarrollado por: Jorge Méndez - Programandoweb
+ *  Correo: lic.jorgemendez@gmail.com
+ *  Celular: 3115000926
+ *  website: Programandoweb.net
+ *  Proyecto: Ivoolve - Sistema de Rutas
+ * ---------------------------------------------------
+ */
+
+import { Fragment, useState } from "react";
+import { MdFileUpload } from "react-icons/md";
+import Card from "@/components/card";
+import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
+
+interface Props {
+  routes: {
+    order: number;
+    address: string;
+    lat: number;
+    lng: number;
+  }[];
+  formData?: any;
+  getInit?: any;
+  items: any[];
+  setItems: React.Dispatch<React.SetStateAction<any[]>>;
+}
+
+const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, formData }) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setLoading(true);
+
+    try {
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const token = user?.token || null;
+
+      const form = new FormData();
+      form.append("file", file);
+
+      let BACKEND = "";
+      if (window && window.location && window.location.hostname) {
+        BACKEND = `${window.location.protocol}//${window.location.hostname}`;
+        if (window.location.port) {
+          BACKEND += `:${process.env.NEXT_PUBLIC_PORT}`;
+        }
+        BACKEND += process.env.NEXT_PUBLIC_VERSION || "/api/v1";
+      }
+
+      if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+        BACKEND =
+          process.env.NEXT_PUBLIC_BACKEND_URL + process.env.NEXT_PUBLIC_VERSION;
+      }
+
+      const response = await fetch(BACKEND + "/routes/import-excel", {
+        method: "POST",
+        body: form,
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const responseData = await response.json();
+
+      if (responseData?.data?.items) {
+        setItems(responseData.data.items);
+      }
+    } catch (err) {
+      console.error("Error al subir archivo:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAccept = (idx: string) => {
+    formData
+      .handleRequest(
+        formData.backend + "/dashboard/routes/2/set-status-address",
+        "post",
+        { direction: idx, status: "accept" }
+      )
+      .then((res: any) => {
+        setItems(res.items);
+      });
+  };
+
+  const handleReject = (idx: string) => {
+    formData
+      .handleRequest(
+        formData.backend + "/dashboard/routes/2/set-status-address",
+        "post",
+        { direction: idx, status: "reject" }
+      )
+      .then((res: any) => {
+        setItems(res.items);
+      });
+  };
+
+  return (
+    <div className="">
+      <Card className="shadow-lg border border-gray-100 mt-6">
+        <div className="">
+          <h2 className="text-xl font-bold text-gray-700">Ruta a seguir</h2>
+          {routes.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border border-gray-200 divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Dirección</th>
+                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-600">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {routes.map((route, idx) => {
+                    const relatedItems = items.filter((it) => it.origin_address === route.address);
+
+                    return (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 text-sm text-gray-700">{route.order}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700">
+                          {route.address}
+                          {relatedItems.length > 0 && (
+                            <div className="mt-1 text-xs text-gray-500 space-y-1">
+                              {relatedItems.map((it) => (
+                                <div key={it.id} className="flex flex-col">
+                                  <span><strong>ID:</strong> {it.id}</span>
+                                  <span><strong>Guía:</strong> {it.guide}</span>
+                                  <span><strong>Status:</strong> {it.status}</span>
+                                  <span><strong>Acción:</strong> {it.type==='pickup'?"Recoger Caja":"Dejar Caja"}</span>                                  
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-center space-x-3">
+                          {relatedItems.find((search: any) => search.status === "Borrador") ? (
+                            <Fragment>
+                              <button
+                                type="button"
+                                onClick={() => handleAccept(route.address)}
+                                className="text-green-600 hover:text-green-800"
+                              >
+                                <FaThumbsUp />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReject(route.address)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <FaThumbsDown />
+                              </button>
+                            </Fragment>
+                          ) : (
+                            <span className="text-gray-500">
+                              {relatedItems.find((search: any) => search.status)?.status}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500">No hay datos de la ruta.</p>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default CSRRouteImportComponent;

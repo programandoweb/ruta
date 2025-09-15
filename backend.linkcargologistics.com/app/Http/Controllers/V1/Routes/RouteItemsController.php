@@ -131,12 +131,13 @@ class RouteItemsController extends Controller
                 if ($index === 0) continue; // saltar encabezados
 
                 $items[] = [
-                    'name'                => $row[0] ?? null,
-                    'phone'               => $row[1] ?? '',
-                    'origin_address'      => $row[2] ?? '',
-                    'destination_address' => $row[3] ?? '',
-                    'type'                => $row[4] ?? 'deliver',
-                    'status'              => $row[5] ?? 'Borrador',
+                    'guide'               => $row[0] ?? null,
+                    'name'                => $row[1] ?? null,
+                    'phone'               => $row[2] ?? '',
+                    'origin_address'      => $row[3] ?? '',
+                    'destination_address' => $row[4] ?? '',
+                    'type'                => $row[5] ?? 'deliver',
+                    'status'              => $row[6] ?? 'Borrador',
                 ];
             }
 

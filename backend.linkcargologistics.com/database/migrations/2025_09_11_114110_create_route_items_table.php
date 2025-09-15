@@ -28,6 +28,9 @@ return new class extends Migration
             $table->integer('route_id')->unsigned();
             $table->foreign('route_id')->on('routes')->references('id')->onDelete('cascade');
 
+            // Número de Guía 
+            $table->string('guide');
+
             // Datos de cada parada
             $table->string('name')->nullable(); // Nombre opcional
             $table->string('phone'); // Celular

@@ -25,6 +25,20 @@ Route::prefix('dashboard/routes')->group(function () {
     Route::get('/{id}', [RoutesController::class, 'show']);
     Route::put('/{id}', [RoutesController::class, 'update']);
     Route::delete('/{id}', [RoutesController::class, 'destroy']);
+    // 👇 RUTA NUEVA AÑADIDA AQUÍ
+    // Ruta para una acción específica sobre una ruta existente.
+    Route::post('/{id}/set-status-address', [RoutesController::class, 'setStatusAddress']);
+});
+
+Route::prefix('dashboard/tracking')->group(function () {
+    Route::get('/', [RoutesController::class, 'index']);
+    Route::post('/new', [RoutesController::class, 'store']);
+    Route::get('/{id}', [RoutesController::class, 'show']);
+    Route::put('/{id}', [RoutesController::class, 'update']);
+    Route::delete('/{id}', [RoutesController::class, 'destroy']);
+    // 👇 RUTA NUEVA AÑADIDA AQUÍ
+    // Ruta para una acción específica sobre una ruta existente.
+    Route::post('/{id}/set-status-address', [RoutesController::class, 'setStatusAddress']);
 });
 
 

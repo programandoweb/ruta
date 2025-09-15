@@ -46,23 +46,10 @@ const routes = [
     name: "Seguimiento",
     layout: "/dashboard",
     path: "/dashboard/tracking",
-    icon: <MdLocalShipping className="h-6 w-6" />,
     permission: "manage_tracking",
-    items: [
-      {
-        name: "En curso",
-        layout: "/dashboard",
-        path: "/dashboard/tracking/active",
-        permission: "manage_tracking",
-      },
-      {
-        name: "Historial",
-        layout: "/dashboard",
-        path: "/dashboard/tracking/history",
-        permission: "manage_tracking",
-      },
-    ],
+    icon: <MdLocalShipping className="h-6 w-6" />,    
   },
+  /*
   {
     name: "Configuración",
     layout: "/dashboard",
@@ -70,6 +57,7 @@ const routes = [
     icon: <MdOutlineSettings className="h-6 w-6" />,
     permission: "read_settings",
   },
+  */
 ];
 
 export default routes;

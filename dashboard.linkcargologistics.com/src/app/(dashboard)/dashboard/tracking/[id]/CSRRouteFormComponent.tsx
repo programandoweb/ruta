@@ -21,6 +21,7 @@ import RouteFormFields from "./RouteFormFields";
 import RouteFormActions from "./RouteFormActions";
 import CSRRouteImportComponent from "./CSRRouteImportComponent";
 
+
 const prefixed = "route";
 
 const CSRRouteFormComponent: React.FC<any> = () => {
@@ -62,31 +63,14 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
   useEffect(getInit, []);
 
-  const onSubmit = (e: any) => {
-    e.preventDefault();
-    formData
-      .handleRequest(
-        formData.backend + location.pathname,
-        inputs.id ? "put" : "post",
-        { ...inputs, items }
-      )
-      .then((res: any) => {
-        setInputs(res[prefixed]);
-        if (!inputs.id && res[prefixed]?.id) {
-          router.replace("/dashboard/routes/" + res[prefixed]?.id);
-        } else {
-          router.replace("/dashboard/routes");
-        }
-      });
-  };
-
+ 
   if(loading){
     return <div className="mt-5 grid h-full grid-cols-1 gap-5">Esperando por la IA...</div>
   }
 
   return (
     <div className="mt-5 grid h-full grid-cols-1 gap-5">
-      <form onSubmit={onSubmit}>
+      
         <RouteFormHeader />
 
         <Card className="mt-2 shadow-lg border border-gray-100">
@@ -96,23 +80,11 @@ const CSRRouteFormComponent: React.FC<any> = () => {
               Formulario de Ruta
             </h2>
 
-            <RouteFormFields inputs={inputs} setInputs={setInputs} />
-
-            {inputs?.id && (
-              <Fragment>
-                {loading ? (
-                  <div className="text-center py-6 text-gray-500 font-medium">
-                    Cargando rutas...
-                  </div>
-                ) : (
-                  <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes}  items={items} setItems={setItems} />
-                )}
-                <RouteFormActions />
-              </Fragment>
-            )}
+            <RouteFormFields inputs={inputs} />            
           </div>
         </Card>
-      </form>
+        <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes}  items={items} setItems={setItems} />            
+      
     </div>
   );
 };
