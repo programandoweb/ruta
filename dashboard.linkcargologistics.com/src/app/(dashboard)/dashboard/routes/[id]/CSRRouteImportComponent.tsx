@@ -13,7 +13,7 @@
 import { Fragment, useState } from "react";
 import { MdFileUpload, MdAddCircle, MdDelete } from "react-icons/md";
 import Card from "@/components/card";
-import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
+import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt } from "react-icons/fa";
 
 interface Props {
   routes: {
@@ -22,17 +22,22 @@ interface Props {
     lat: number;
     lng: number;
   }[];
-  formData?:any;
-  getInit?:any;
+  formData?: any;
+  getInit?: any;
   items: any[];
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
-const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , formData, getInit}) => {
+const CSRRouteImportComponent: React.FC<Props> = ({
+  items,
+  setItems,
+  routes,
+  formData,
+  getInit,
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Estado para agregar manualmente
   const [newItem, setNewItem] = useState<any>({
     name: "",
     phone: "",
@@ -41,6 +46,14 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
     type: "deliver",
     status: "Borrador",
   });
+
+  const openGoogleMaps = (lat: number, lng: number) => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const baseUrl = isMobile
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
+      : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+    window.open(baseUrl, "_blank");
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -51,7 +64,6 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
   const handleUpload = async () => {
     if (!file) return;
     setLoading(true);
-
     try {
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
@@ -87,7 +99,6 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
       }
 
       const responseData = await response.json();
-
       if (responseData?.data?.items) {
         setItems(responseData.data.items);
       }
@@ -114,74 +125,85 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleAccept = (idx: string, id:any) => {
-    console.log("Aceptar ruta:", idx);
+  const handleAccept = (idx: string, id: any) => {
     formData
       .handleRequest(
         formData.backend + "/dashboard/routes/2/set-status-address",
         "post",
-        {
-          direction:idx,
-          status:"accept",
-          route_items:id
-        }        
+        { direction: idx, status: "accept", route_items: id }
       )
       .then((res: any) => {
-        //getInit()
-        setItems(res.items)        
+        setItems(res.items);
       });
   };
 
-  const handleReject = (idx: string, id:any) => {
-    console.log("Rechazar ruta:", idx);
+  const handleReject = (idx: string, id: any) => {
     formData
       .handleRequest(
         formData.backend + "/dashboard/routes/2/set-status-address",
         "post",
-        {
-          direction:idx,
-          status:"reject",
-          route_items:id
-        }        
+        { direction: idx, status: "reject", route_items: id }
       )
       .then((res: any) => {
-        //getInit()
-        setItems(res.items)
-        console.log(res)
+        setItems(res.items);
       });
   };
-  
+
+  const getBorderColor = (status: string) => {
+    switch (status) {
+      case "Borrador":
+        return "border-gray-400";
+      case "Agendado":
+        return "border-blue-500";
+      case "En proceso":
+        return "border-yellow-500";
+      case "Rechazado":
+        return "border-red-500";
+      case "Cancelado":
+        return "border-purple-500";
+      default:
+        return "border-gray-300";
+    }
+  };
 
   return (
     <div className="mt-5">
       <Card className="shadow-lg border border-gray-100">
         <div className="p-6 space-y-6">
-          <h2 className="text-xl font-bold text-gray-700 flex items-center gap-2">
-            <MdFileUpload className="text-blue-600 text-2xl" />
-            Importar Items desde Excel o agregar manualmente
-          </h2>
+          {/* Input y carga de archivo */}
+          {routes.length === 0 && (
+            <Fragment>
+              <h2 className="text-xl font-bold text-gray-700 flex items-center gap-2">
+                <MdFileUpload className="text-blue-600 text-2xl" />
+                Importar Items desde Excel o agregar manualmente
+              </h2>
+              <input
+                type="file"
+                accept=".xls,.xlsx"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4
+                  file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={!file || loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? "Subiendo..." : "Subir y Procesar"}
+              </button>
+            </Fragment>
+          )}
 
-          {/* Input de archivo */}
-          <input
-            type="file"
-            accept=".xls,.xlsx"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4
-                       file:rounded-lg file:border-0 file:text-sm file:font-semibold
-                       file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={!file || loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          {/* Agregar manual */}
+          <div
+            className={
+              routes.length === 0
+                ? "mt-8 space-y-4 border-t pt-6"
+                : "mt-0 space-y-4 pt-6"
+            }
           >
-            {loading ? "Subiendo..." : "Subir y Procesar"}
-          </button>
-
-          {/* Formulario de agregar manual */}
-          <div className="mt-8 space-y-4 border-t pt-6">
             <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
               <MdAddCircle className="text-green-600 text-xl" />
               Agregar Item Manualmente
@@ -229,29 +251,6 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
                 }
                 className="border rounded px-3 py-2 text-sm w-full"
               />
-              <select
-                value={newItem.type}
-                onChange={(e) =>
-                  setNewItem((p: any) => ({ ...p, type: e.target.value }))
-                }
-                className="border rounded px-3 py-2 text-sm w-full"
-              >
-                <option value="deliver">Dejar caja</option>
-                <option value="pickup">Recoger caja</option>
-              </select>
-              <select
-                value={newItem.status}
-                onChange={(e) =>
-                  setNewItem((p: any) => ({ ...p, status: e.target.value }))
-                }
-                className="border rounded px-3 py-2 text-sm w-full"
-              >
-                <option>Borrador</option>
-                <option>Agendado</option>
-                <option>En proceso</option>
-                <option>Rechazado</option>
-                <option>Cancelado</option>
-              </select>
             </div>
             <button
               type="button"
@@ -264,101 +263,75 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
         </div>
       </Card>
 
-       <Card className="shadow-lg border border-gray-100">
+      <Card>
         <div className="mt-5 grid h-full md:grid-cols-2 gap-5">
           {/* Rutas */}
           <div>
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
               <h2 className="text-xl font-bold text-gray-700">Ruta a seguir</h2>
-              {
-              routes.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-gray-200 divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                          #
-                        </th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                          Dirección
-                        </th>
-                        {
-                          /*
-                            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                              Latitud
-                            </th>
-                            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                              Longitud
-                            </th>  
-                          */
-                        }
-                        
-                        <th className="px-4 py-2 text-center text-sm font-semibold text-gray-600">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {routes.map((route, idx) => {
-                        // Buscar items relacionados con esta dirección
-                        const relatedItems = items.filter(
-                          (it) => it.origin_address === route.address
-                        );
+              {routes.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {routes.map((route, idx) => {
+                    const relatedItems = items.filter(
+                      (it) => it.origin_address === route.address
+                    );
+                    const status = relatedItems[0]?.status || "Borrador";
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-4 rounded-lg shadow-sm border-2 ${getBorderColor(
+                          status
+                        )} bg-white`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-semibold text-gray-700">
+                            #{route.order}
+                          </span>
+                          <span className="text-xs text-gray-500">{status}</span>
+                        </div>
+                        <p className="text-sm text-gray-800 font-medium">
+                          {route.address}
+                        </p>
 
-                        return (
-                          <tr key={idx} className="hover:bg-gray-50">
-                            <td className="px-4 py-2 text-sm text-gray-700">{route.order}</td>
-                            <td className="px-4 py-2 text-sm text-gray-700">
-                              {route.address}
-                              {relatedItems.length > 0 && (
-                                <div className="mt-1 text-xs text-gray-500 space-y-1">
-                                  {relatedItems.map((it) => (
-                                    <div key={it.id} className="flex flex-col">
-                                      <span>
-                                        <strong>ID:</strong> {it.id}
-                                      </span>
-                                      <span>
-                                        <strong>Guía:</strong> {it.guide}
-                                      </span>
-                                      <span>
-                                        <strong>Status:</strong> {it.status}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-2 text-center space-x-3">
-                              {
-                                relatedItems.find((search:any)=>{return search.status==='Borrador'})?<Fragment>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAccept(route.address,relatedItems[0]?.id)}
-                                    className="text-green-600 hover:text-green-800"
-                                  >
-                                    <FaThumbsUp />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleReject(route.address,relatedItems[0]?.id)}
-                                    className="text-red-600 hover:text-red-800"
-                                  >
-                                    <FaThumbsDown />
-                                  </button>
-                                </Fragment>:<span className="text-gray-500">
-                                  {
-                                    relatedItems.find((search:any)=>{return search.status}).status
-                                  }
-                                </span>
-                              }
-                              
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+                        <div className="mt-3 flex justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => openGoogleMaps(route.lat, route.lng)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <FaMapMarkedAlt />
+                          </button>
 
-                  </table>
+                          {relatedItems.find(
+                            (s: any) => s.status === "Borrador"
+                          ) ? (
+                            <Fragment>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleAccept(route.address, relatedItems[0]?.id)
+                                }
+                                className="text-green-600 hover:text-green-800"
+                              >
+                                <FaThumbsUp />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleReject(route.address, relatedItems[0]?.id)
+                                }
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <FaThumbsDown />
+                              </button>
+                            </Fragment>
+                          ) : (
+                            <span className="text-gray-500 text-sm">{status}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-gray-500">No hay datos de la ruta.</p>
@@ -367,76 +340,41 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
           </div>
 
           {/* Items */}
-          <div className="p-6 space-y-6">
+          <div className="space-y-6">
             <h2 className="text-xl font-bold text-gray-700">Listado de Items</h2>
             {items.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border border-gray-200 divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                        Guía
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                        Nombre
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                        Teléfono
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                        Origen
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                        Destino
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                        Tipo
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                        Estado
-                      </th>
-                      <th className="px-4 py-2 text-center text-sm font-semibold text-gray-600">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {items.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {item.guide}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {item.name}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {item.phone}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {item.origin_address}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {item.destination_address}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700 capitalize">
-                          {item.type}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {item.status}
-                        </td>
-                        <td className="px-4 py-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(idx)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <MdDelete />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-3 gap-4">
+                {items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-lg shadow-sm border border-gray-200 bg-white"
+                  >
+                    <p className="text-sm font-semibold text-gray-800">
+                      Guía: {item.guide}
+                    </p>
+                    <p className="text-sm text-gray-700">Nombre: {item.name}</p>
+                    <p className="text-sm text-gray-700">Teléfono: {item.phone}</p>
+                    <p className="text-sm text-gray-700">
+                      Origen: {item.origin_address}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      Destino: {item.destination_address}
+                    </p>
+                    <p className="text-sm text-gray-700 capitalize">
+                      Tipo: {item.type}
+                    </p>
+                    <p className="text-sm text-gray-700">Estado: {item.status}</p>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(idx)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <MdDelete />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-gray-500">No hay items en la ruta.</p>

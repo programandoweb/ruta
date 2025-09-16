@@ -28,12 +28,12 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const router = useRouter();
 
   const [inputs, setInputs] = useState<any>({
-    date: "",
-    name: "",
-    phone: "",
-    origin_address: "",
+    date: "2025-10-18",
+    name: "Carlos Ramirez",
+    phone: "559-123-4567",
+    origin_address: "Fresno City Hall, 2600 Fresno St, Fresno, CA 93721",
     destination_address:
-      "",
+      "California State Capitol, 1315 10th St, Sacramento, CA 95814",
     type: "deliver",
   });
 
