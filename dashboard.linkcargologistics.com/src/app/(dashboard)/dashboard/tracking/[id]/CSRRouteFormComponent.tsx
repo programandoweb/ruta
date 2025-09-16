@@ -72,17 +72,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
     <div className="mt-5 grid h-full grid-cols-1 gap-5">
       
         <RouteFormHeader />
-
-        <Card className="mt-2 shadow-lg border border-gray-100">
-          <div className="p-6 space-y-6">
-            <h2 className="text-xl font-bold text-gray-700 flex items-center gap-2">
-              <MdSwapHoriz className="text-blue-600 text-2xl" />
-              Formulario de Ruta
-            </h2>
-
-            <RouteFormFields inputs={inputs} />            
-          </div>
-        </Card>
+       
         <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes}  items={items} setItems={setItems} />            
       
     </div>

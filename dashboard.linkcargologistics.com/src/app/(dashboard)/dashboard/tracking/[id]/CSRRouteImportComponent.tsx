@@ -13,7 +13,7 @@
 import { Fragment, useState } from "react";
 import { MdFileUpload } from "react-icons/md";
 import Card from "@/components/card";
-import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
+import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt } from "react-icons/fa";
 
 interface Props {
   routes: {
@@ -88,28 +88,36 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
     }
   };
 
-  const handleAccept = (idx: string) => {
+  const handleAccept = (idx: string, id: any) => {
     formData
       .handleRequest(
         formData.backend + "/dashboard/routes/2/set-status-address",
         "post",
-        { direction: idx, status: "accept" }
+        { direction: idx, status: "accept", route_items: id }
       )
       .then((res: any) => {
         setItems(res.items);
       });
   };
 
-  const handleReject = (idx: string) => {
+  const handleReject = (idx: string, id: any) => {
     formData
       .handleRequest(
         formData.backend + "/dashboard/routes/2/set-status-address",
         "post",
-        { direction: idx, status: "reject" }
+        { direction: idx, status: "reject", route_items: id }
       )
       .then((res: any) => {
         setItems(res.items);
       });
+  };
+
+  const openGoogleMaps = (lat: number, lng: number) => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const baseUrl = isMobile
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
+      : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+    window.open(baseUrl, "_blank");
   };
 
   return (
@@ -121,8 +129,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
             <div className="overflow-x-auto">
               <table className="min-w-full border border-gray-200 divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm">
                 <thead className="bg-gray-100">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
+                  <tr>                    
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Dirección</th>
                     <th className="px-4 py-2 text-center text-sm font-semibold text-gray-600">Acciones</th>
                   </tr>
@@ -133,7 +140,6 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
 
                     return (
                       <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-sm text-gray-700">{route.order}</td>
                         <td className="px-4 py-2 text-sm text-gray-700">
                           {route.address}
                           {relatedItems.length > 0 && (
@@ -150,18 +156,30 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
                           )}
                         </td>
                         <td className="px-4 py-2 text-center space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => openGoogleMaps(route.lat, route.lng)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <FaMapMarkedAlt />
+                          </button>
+
                           {relatedItems.find((search: any) => search.status === "Borrador") ? (
                             <Fragment>
                               <button
                                 type="button"
-                                onClick={() => handleAccept(route.address)}
+                                onClick={() =>
+                                  handleAccept(route.address, relatedItems[0]?.id)
+                                }
                                 className="text-green-600 hover:text-green-800"
                               >
                                 <FaThumbsUp />
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleReject(route.address)}
+                                onClick={() =>
+                                  handleReject(route.address, relatedItems[0]?.id)
+                                }
                                 className="text-red-600 hover:text-red-800"
                               >
                                 <FaThumbsDown />
