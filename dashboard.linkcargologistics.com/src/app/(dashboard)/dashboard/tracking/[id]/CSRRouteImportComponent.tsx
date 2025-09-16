@@ -123,8 +123,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
   return (
     <div className="">
       <Card className="shadow-lg border border-gray-100 mt-6">
-        <div className="">
-          <h2 className="text-xl font-bold text-gray-700">Ruta a seguir</h2>
+        <div className="">          
           {routes.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full border border-gray-200 divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm">
