@@ -417,6 +417,7 @@ class RoutesController extends Controller
      */
     public function setStatusAddress(Request $request, string $id)
     {
+        
         // 🛡️ 1. Validar los datos que llegan en el request.
         $validator = Validator::make($request->all(), [
             'direction' => 'required|string|max:255',
@@ -426,10 +427,14 @@ class RoutesController extends Controller
         if ($validator->fails()) {
             return response()->error('Datos de entrada inválidos.', 422, $validator->errors());
         }
-
         try {
+            $routeItem      =   RouteItem::where('id', $request->route_items)->first();
+            
+
+            
             // 2. Encontrar la ruta usando el $id. Si no existe, lanzará una excepción.
-            Routes::findOrFail($id);
+            Routes::findOrFail($routeItem->route_id );
+            
 
             // ⚙️ 3. Mapear el estado del payload a los estados de la base de datos.
             //    Esto da flexibilidad para que el frontend y el backend usen términos diferentes.
@@ -441,14 +446,15 @@ class RoutesController extends Controller
             
             $newDbStatus = $statusMap[$request->status];
 
+            //p([$request->all(),$id]);
+
             // 💡 4. Actualizar el estado de TODOS los items que coincidan.
             //    Esta es la forma más eficiente. Se ejecuta una sola consulta a la base de datos
             //    en lugar de iterar sobre una colección en PHP.
-            $updatedCount = RouteItem::where('route_id', $id)
-                                     ->where('origin_address', $request->direction)
-                                     ->update(['status' => $newDbStatus]);
-
-            $item           =   RouteItem::where('route_id', $id)->first();
+            
+            $updatedCount   =   RouteItem::where('id', $request->route_items)->update(['status' => $newDbStatus]);
+            //p($updatedCount);
+            //p($routeItem->route_id);
 
             if ($updatedCount > 0) {
                 $message = "Se actualizaron {$updatedCount} paradas a estado '{$newDbStatus}'.";
@@ -456,7 +462,8 @@ class RoutesController extends Controller
                 $message = "No se encontraron paradas que coincidieran con la dirección proporcionada en esta ruta.";
             }
 
-            $route          =   Routes::findOrFail($id);
+            $route          =   Routes::findOrFail($routeItem->route_id);
+            $item           =   RouteItem::where('route_id', $routeItem->route_id)->first();
 
             // 📤 5. Devolver una respuesta exitosa y significativa.
             return response()->success(['updated_count' => $updatedCount,"item"=>$item,"items"=>$route->items], $message);

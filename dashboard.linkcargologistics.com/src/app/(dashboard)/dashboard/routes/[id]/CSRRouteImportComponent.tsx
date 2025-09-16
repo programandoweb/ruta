@@ -114,7 +114,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleAccept = (idx: string) => {
+  const handleAccept = (idx: string, id:any) => {
     console.log("Aceptar ruta:", idx);
     formData
       .handleRequest(
@@ -122,7 +122,8 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
         "post",
         {
           direction:idx,
-          status:"accept"
+          status:"accept",
+          route_items:id
         }        
       )
       .then((res: any) => {
@@ -131,7 +132,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
       });
   };
 
-  const handleReject = (idx: string) => {
+  const handleReject = (idx: string, id:any) => {
     console.log("Rechazar ruta:", idx);
     formData
       .handleRequest(
@@ -139,7 +140,8 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
         "post",
         {
           direction:idx,
-          status:"reject"
+          status:"reject",
+          route_items:id
         }        
       )
       .then((res: any) => {
@@ -331,14 +333,14 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes , fo
                                 relatedItems.find((search:any)=>{return search.status==='Borrador'})?<Fragment>
                                   <button
                                     type="button"
-                                    onClick={() => handleAccept(route.address)}
+                                    onClick={() => handleAccept(route.address,relatedItems[0]?.id)}
                                     className="text-green-600 hover:text-green-800"
                                   >
                                     <FaThumbsUp />
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleReject(route.address)}
+                                    onClick={() => handleReject(route.address,relatedItems[0]?.id)}
                                     className="text-red-600 hover:text-red-800"
                                   >
                                     <FaThumbsDown />
