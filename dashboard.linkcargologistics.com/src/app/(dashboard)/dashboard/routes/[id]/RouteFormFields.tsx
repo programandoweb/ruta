@@ -22,19 +22,23 @@ const RouteFormFields: React.FC<Props> = ({ inputs, setInputs, drivers }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
 
+      {
+        drivers&&drivers.length>0&&(
+          <SelectField
+            id="employees_id"
+            name="employees_id"
+            placeholder="Conductor"
+            label="Conductor"
+            required={true}
+            defaultValue={inputs.employees_id}
+            setInputs={setInputs}
+            options={drivers||[]}
+            variant="autenticación"
+            extra="mb-0"
+          />
+        )
+      }
       
-      <SelectField
-        id="employees_id"
-        name="employees_id"
-        placeholder="Conductor"
-        label="Conductor"
-        required={true}
-        defaultValue={inputs.employees_id}
-        setInputs={setInputs}
-        options={drivers||[]}
-        variant="autenticación"
-        extra="mb-0"
-      />
 
 
 
