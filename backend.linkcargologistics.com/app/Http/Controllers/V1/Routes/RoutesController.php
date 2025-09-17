@@ -36,9 +36,20 @@ class RoutesController extends Controller
                         ->with('items')
                         ->latest('id');
 
-            // 🔹 Filtramos solo si NO es admin ni employee
             $user = auth()->user();
-            if (!$user->hasAnyRole(['admin', 'employee'])) {
+
+            // 🔹 Lógica de filtrado por rol
+            if ($user->hasRole('admin')) {
+                // Admin → sin filtro
+            } elseif ($user->hasRole('employees')) {
+                // Employees → filtra por employees_id
+                //echo $user->id; exit;
+                $query->where('employees_id', $user->id);
+            } elseif ($user->hasRole('managers')) {
+                // Managers → filtra por user_id
+                $query->where('user_id', $user->id);
+            } else {
+                // Otros roles → acceso restringido a sus propias rutas (por seguridad)
                 $query->where('user_id', $user->id);
             }
 
@@ -49,6 +60,7 @@ class RoutesController extends Controller
             return response()->error($e->getMessage(), 500);
         }
     }
+
 
 
     /**
