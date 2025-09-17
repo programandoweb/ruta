@@ -28,6 +28,9 @@ return new class extends Migration
             $table->unsignedInteger('user_id')->nullable();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
 
+            $table->unsignedInteger('employees_id')->nullable();
+            $table->foreign('employees_id')->references('id')->on('users')->onDelete('set null');
+
             // Nombre de la ruta (opcional)
             $table->string('name')->nullable();
 

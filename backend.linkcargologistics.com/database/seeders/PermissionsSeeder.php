@@ -81,10 +81,9 @@ class PermissionsSeeder extends Seeder
                 ]);
             } elseif ($roleName === 'managers') {
                 $role->syncPermissions([
-                    'read_routes', 'create_routes', 'update_routes',
-                    'read_tracking', 'update_tracking',
-
-                    'read_settings',
+                    'home_index',
+                    'create_routes', 'read_routes', 'update_routes', 'delete_routes', 'manage_routes',
+                    'dev_access',
                 ]);
             } elseif ($roleName === 'employees') {
                 $role->syncPermissions([

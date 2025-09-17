@@ -135,7 +135,16 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {routes.map((route, idx) => {
-                    const relatedItems = items.filter((it) => it.origin_address === route.address);
+                    //const relatedItems = items.filter((it) => it.origin_address === route.address);
+                    let relatedItems = items.filter(
+                      (it) => it.origin_address === route.address
+                    );
+                    
+                    if(!relatedItems||relatedItems.length===0){
+                      relatedItems = items.filter(
+                        (it) => it.origin_address?.toLowerCase().includes(route.address.toLowerCase())
+                      );
+                    }
 
                     return (
                       <tr key={idx} className="hover:bg-gray-50">

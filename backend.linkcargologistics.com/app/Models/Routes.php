@@ -19,6 +19,7 @@ class Routes extends Model
         'destination_address',
         'type',
         'date',
+        'employees_id'
     ];
 
     /**

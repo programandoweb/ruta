@@ -272,9 +272,17 @@ const CSRRouteImportComponent: React.FC<Props> = ({
               {routes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {routes.map((route, idx) => {
-                    const relatedItems = items.filter(
+                    
+                    let relatedItems = items.filter(
                       (it) => it.origin_address === route.address
                     );
+                    
+                    if(!relatedItems||relatedItems.length===0){
+                      relatedItems = items.filter(
+                        (it) => it.origin_address?.toLowerCase().includes(route.address.toLowerCase())
+                      );
+                    }
+                    
                     const status = relatedItems[0]?.status || "Borrador";
                     return (
                       <div
@@ -301,6 +309,8 @@ const CSRRouteImportComponent: React.FC<Props> = ({
                           >
                             <FaMapMarkedAlt />
                           </button>
+
+                          
 
                           {relatedItems.find(
                             (s: any) => s.status === "Borrador"

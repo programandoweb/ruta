@@ -47,7 +47,7 @@ class RoutesController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'user_id'             => 'nullable|exists:users,id',
+                // eliminamos `user_id` del request para no permitirlo
                 'name'                => 'nullable|string|max:255',
                 'phone'               => 'required|string|max:20',
                 'origin_address'      => 'required|string|max:255',
@@ -64,6 +64,9 @@ class RoutesController extends Controller
                 'items.*.status'             => 'nullable|string|in:Borrador,Agendado,En proceso,Rechazado,Cancelado',
             ]);
 
+            // Forzamos user_id desde el usuario logueado
+            $validated['user_id'] = auth()->id();
+
             $route = Routes::create($validated);
 
             if (!empty($validated['items'])) {
@@ -79,6 +82,7 @@ class RoutesController extends Controller
             return response()->error($e->getMessage(), 500);
         }
     }
+
 
     /**
      * GET /routes/{id}
