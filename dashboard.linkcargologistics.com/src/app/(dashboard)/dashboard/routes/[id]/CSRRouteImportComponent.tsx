@@ -15,6 +15,7 @@ import { MdFileUpload, MdAddCircle, MdDelete } from "react-icons/md";
 import Card from "@/components/card";
 import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt } from "react-icons/fa";
 
+
 interface Props {
   routes: {
     order: number;
@@ -25,6 +26,7 @@ interface Props {
   formData?: any;
   getInit?: any;
   items: any[];
+  
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
@@ -33,7 +35,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   setItems,
   routes,
   formData,
-  getInit,
+  getInit,  
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);

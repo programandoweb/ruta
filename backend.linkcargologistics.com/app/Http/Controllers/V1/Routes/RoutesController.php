@@ -22,21 +22,34 @@ class RoutesController extends Controller
     public function index(Request $request)
     {
         try {
-            $perPage    =   (int) $request->input('per_page', config('constants.RESULT_X_PAGE', 15));
-            $routes     =   Routes::select(         "id",
-                                                    "name as Nombre",
-                                                    "phone as Teléfono",
-                                                    "origin_address as Dirección_Origen",
-                                                    "destination_address as Dirección_Destino",
-                                                    "type as Tipo",
-                                                    "created_at as Fecha"
-                                                )->with('items')->latest('id')->paginate($perPage);
+            $perPage = (int) $request->input('per_page', config('constants.RESULT_X_PAGE', 15));
+
+            $query = Routes::select(
+                            "id",
+                            "name as Nombre",
+                            "phone as Teléfono",
+                            "origin_address as Dirección_Origen",
+                            "destination_address as Dirección_Destino",
+                            "type as Tipo",
+                            "created_at as Fecha"
+                        )
+                        ->with('items')
+                        ->latest('id');
+
+            // 🔹 Filtramos solo si NO es admin ni employee
+            $user = auth()->user();
+            if (!$user->hasAnyRole(['admin', 'employee'])) {
+                $query->where('user_id', $user->id);
+            }
+
+            $routes = $query->paginate($perPage);
 
             return response()->success(compact('routes'), 'Listado de rutas.');
         } catch (\Throwable $e) {
             return response()->error($e->getMessage(), 500);
         }
     }
+
 
     /**
      * POST /routes
@@ -338,11 +351,21 @@ class RoutesController extends Controller
 
             }
 
+            
+
             // Paso 5: Devolvemos la respuesta final con los datos de la IA (obtenidos de la caché o recién generados).
-            return response()->success([
+            $extra = [];
+            if (auth()->user()->hasRole('admin')) {
+                $drivers = \App\Models\User::whereHas('roles', function ($q) {
+                    $q->where('name', 'employees');
+                })->get();
+                $extra['drivers'] = $drivers;
+            }
+
+            return response()->success(array_merge([
                 'route' => $route,
                 'ia'    => $iaData,
-            ], 'Hoja de ruta obtenida correctamente.');
+            ], $extra), 'Hoja de ruta obtenida correctamente.');
 
 
         } catch (ModelNotFoundException $e) {
@@ -365,6 +388,7 @@ class RoutesController extends Controller
         try {
             $validated = $request->validate([
                 'user_id'             => 'nullable|exists:users,id',
+                'employees_id'        => 'nullable|exists:users,id',
                 'name'                => 'nullable|string|max:255',
                 'phone'               => 'required|string|max:20',
                 'origin_address'      => 'required|string|max:255',

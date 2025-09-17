@@ -40,6 +40,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const [items, setItems]     = useState<any>([]);
   const [routes, setRoutes]   = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [drivers, setDrivers] = useState<any>([]);
 
   const getInit = () => {
     setLoading(true);
@@ -50,11 +51,13 @@ const CSRRouteFormComponent: React.FC<any> = () => {
           setInputs(response[prefixed]);
         }
         if (response && response.ia && response.ia.dataset) {
-          console.log(response.ia.dataset)
           setRoutes(response.ia.dataset);
         }
         if (response && response[prefixed] && response[prefixed].items) {
           setItems(response[prefixed].items);
+        }
+        if (response && response.drivers) {
+          setDrivers(response.drivers);
         }
       })
       .finally(() => setLoading(false));
@@ -96,7 +99,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
               Formulario de Ruta
             </h2>
 
-            <RouteFormFields inputs={inputs} setInputs={setInputs} />
+            <RouteFormFields drivers={drivers} inputs={inputs} setInputs={setInputs} />
 
             {inputs?.id && (
               <Fragment>
