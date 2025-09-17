@@ -139,6 +139,26 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
       console.error("❌ Error enviando mensaje:", error);
     }
 
+
+     try {
+      const response = await fetch("https://ws-server.ivoolve.com/api/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: "573115000926@c.us",
+          message: "Hola, ya estamos cerca a recoger su caja, por favor está pendiente",
+        }),
+      });
+
+      const data = await response.json();
+      console.log("📩 Respuesta API WhatsApp:", data);
+      
+    } catch (error) {
+      console.error("❌ Error enviando mensaje:", error);
+    }
+
     try {
       const response = await fetch("https://ws-server.ivoolve.com/api/send", {
         method: "POST",
@@ -156,6 +176,8 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
     } catch (error) {
       console.error("❌ Error enviando mensaje:", error);
     }
+
+    
 
 
 
