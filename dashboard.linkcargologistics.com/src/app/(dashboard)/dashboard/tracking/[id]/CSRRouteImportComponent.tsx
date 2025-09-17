@@ -112,13 +112,69 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
       });
   };
 
-  const openGoogleMaps = (lat: number, lng: number) => {
+  const openGoogleMaps = async (lat: number, lng: number) => {
+    //const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const baseUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+
+    // Abrir Google Maps en nueva pestaña
+    window.open(baseUrl, "_blank");
+
+    // Enviar mensaje al endpoint
+    try {
+      const response = await fetch("https://ws-server.ivoolve.com/api/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: "573217002700@c.us",
+          message: "Hola, ya estamos cerca a recoger su caja, por favor está pendiente",
+        }),
+      });
+
+      const data = await response.json();
+      console.log("📩 Respuesta API WhatsApp:", data);
+      
+    } catch (error) {
+      console.error("❌ Error enviando mensaje:", error);
+    }
+
+    try {
+      const response = await fetch("https://ws-server.ivoolve.com/api/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: "5215526589002@c.us",
+          message: "Hola, ya estamos cerca a recoger su caja, por favor está pendiente",
+        }),
+      });
+
+      const data = await response.json();
+      console.log("📩 Respuesta API WhatsApp:", data);
+    } catch (error) {
+      console.error("❌ Error enviando mensaje:", error);
+    }
+
+
+
+  };
+
+  /*
+  const openGoogleMaps2 = (lat: number, lng: number) => {
+
+
+
+
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const baseUrl = isMobile
       ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
       : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
     window.open(baseUrl, "_blank");
+
   };
+  */
 
   return (
     <div className="">
