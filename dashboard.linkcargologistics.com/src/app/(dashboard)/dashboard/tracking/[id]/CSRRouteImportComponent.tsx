@@ -112,7 +112,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
       });
   };
 
-  const openGoogleMaps = async (lat: number, lng: number) => {
+  const openGoogleMaps = async (lat: number, lng: number,address:any) => {
     //const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const baseUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 
@@ -128,7 +128,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
         },
         body: JSON.stringify({
           to: "573217002700@c.us",
-          message: "Hola, ya estamos cerca a recoger su caja, por favor está pendiente",
+          message: "Hola, ya estamos cerca a recoger su caja en "+address+", por favor está pendiente",
         }),
       });
 
@@ -244,7 +244,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
                         <td className="px-4 py-2 text-center space-x-3">
                           <button
                             type="button"
-                            onClick={() => openGoogleMaps(route.lat, route.lng)}
+                            onClick={() => openGoogleMaps(route.lat, route.lng,route.address)}
                             className="text-blue-600 hover:text-blue-800"
                           >
                             <FaMapMarkedAlt />
