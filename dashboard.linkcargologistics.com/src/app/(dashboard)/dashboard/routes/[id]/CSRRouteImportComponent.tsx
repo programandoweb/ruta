@@ -366,16 +366,48 @@ const CSRRouteImportComponent: React.FC<Props> = ({
                     </p>
                     <p className="text-sm text-gray-700">Nombre: {item.name}</p>
                     <p className="text-sm text-gray-700">Teléfono: {item.phone}</p>
-                    <p className="text-sm text-gray-700">
-                      Origen: {item.origin_address}
-                    </p>
-                    <p className="text-sm text-gray-700">
-                      Destino: {item.destination_address}
-                    </p>
-                    <p className="text-sm text-gray-700 capitalize">
+
+                    {/* Origen editable */}
+                    <div className="mt-1">
+                      <label className="block text-xs text-gray-500">Origen:</label>
+                      <input
+                        type="text"
+                        value={item.origin_address}
+                        onChange={(e) =>
+                          setItems((prev) =>
+                            prev.map((it, i) =>
+                              i === idx ? { ...it, origin_address: e.target.value } : it
+                            )
+                          )
+                        }
+                        className="border rounded px-2 py-1 text-sm w-full"
+                      />
+                    </div>
+
+                    {/* Destino editable */}
+                    <div className="mt-1">
+                      <label className="block text-xs text-gray-500">Destino:</label>
+                      <input
+                        type="text"
+                        value={item.destination_address}
+                        onChange={(e) =>
+                          setItems((prev) =>
+                            prev.map((it, i) =>
+                              i === idx
+                                ? { ...it, destination_address: e.target.value }
+                                : it
+                            )
+                          )
+                        }
+                        className="border rounded px-2 py-1 text-sm w-full"
+                      />
+                    </div>
+
+                    <p className="text-sm text-gray-700 capitalize mt-2">
                       Tipo: {item.type}
                     </p>
                     <p className="text-sm text-gray-700">Estado: {item.status}</p>
+
                     <div className="mt-2 flex justify-end">
                       <button
                         type="button"
@@ -392,6 +424,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
               <p className="text-gray-500">No hay items en la ruta.</p>
             )}
           </div>
+
         </div>
       </Card>
     </div>

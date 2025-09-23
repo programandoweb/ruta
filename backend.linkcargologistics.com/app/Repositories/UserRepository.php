@@ -102,11 +102,14 @@ class UserRepository
 
 
 
-    public function update($request,$id): ?User{
-        $user       =       User::find($id);
-        $user->update($request->all());
+    public function update(int $id, array $data): ?User
+    {
+        $user = User::findOrFail($id);
+        $user->update($data);
+
         return $user;
     }
+
 
     public function updateIdentification($request): ?User{
         $user   =   User::find($request->input("id"));
