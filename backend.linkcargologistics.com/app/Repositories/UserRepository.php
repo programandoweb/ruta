@@ -198,7 +198,7 @@ class UserRepository
         }
 
         // Encuentra el usuario por ID, o devuelve null si no se encuentra
-        return User::with(["credits","credit","sales","paids"])->find($id);
+        return User::find($id);
     }
 
 

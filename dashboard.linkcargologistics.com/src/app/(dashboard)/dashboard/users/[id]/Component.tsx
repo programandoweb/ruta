@@ -18,9 +18,6 @@ import InputField from '@/components/fields/InputField';
 import { useRouter } from 'next/navigation';
 import SelectField from '@/components/fields/SelectField';
 import { UserInputs } from '@/data/interface';
-import AddProperty from '@/components/PropertyOverview/AddProperty';
-import AddParking from '@/components/PropertyOverview/AddParking';
-import AddVehicle from '@/components/PropertyOverview/AddVehicle';
 
 const prefixed = 'user';
 
@@ -182,17 +179,6 @@ const UserFormComponent: React.FC = () => {
           </div>
         </form>
       </Fragment>
-      {
-        inputs.id&&(
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-            <AddProperty user_id={inputs.id||0}/>          
-            <AddParking user_id={inputs.id||0}/>          
-            <AddVehicle user_id={inputs.id||0}/>          
-          </div>
-        )
-      }
-      
-      
     </Fragment>    
   );
 };

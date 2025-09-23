@@ -128,17 +128,18 @@ class RouteItemsController extends Controller
             $items = [];
 
             foreach ($rows as $index => $row) {
-                if ($index === 0) continue; // saltar encabezados
+                if ($index === 0 || empty($row[2])) continue; // saltar encabezados
 
                 $items[] = [
                     'guide'               => $row[0] ?? null,
                     'name'                => $row[1] ?? null,
-                    'phone'               => $row[2] ?? '',
+                    'phone'               => isset($row[2]) ? (string) $row[2] : '',
                     'origin_address'      => $row[3] ?? '',
                     'destination_address' => $row[4] ?? '',
                     'type'                => $row[5] ?? 'deliver',
                     'status'              => $row[6] ?? 'Borrador',
                 ];
+
             }
 
             return response()->success(compact('items'), 'Archivo procesado correctamente.');

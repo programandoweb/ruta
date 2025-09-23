@@ -11,6 +11,7 @@ import {
   MdOutlineSettings,
   MdLocalShipping,
   MdMap,
+  MdPeople, // <-- Nuevo ícono para Usuarios
 } from "react-icons/md";
 
 const routes = [
@@ -48,6 +49,13 @@ const routes = [
     path: "/dashboard/tracking",
     permission: "manage_tracking",
     icon: <MdLocalShipping className="h-6 w-6" />,    
+  },
+  {
+    name: "Usuarios",
+    layout: "/dashboard",
+    path: "/dashboard/users",
+    permission: "read_settings",
+    icon: <MdPeople className="h-6 w-6" />,    
   },
   /*
   {

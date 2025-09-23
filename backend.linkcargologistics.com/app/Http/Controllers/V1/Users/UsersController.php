@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 class UsersController extends Controller
 {
@@ -79,13 +80,35 @@ class UsersController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         try {
-            $user = $this->userRepository->findById($id);
-            return response()->success(compact('user'), 'Detalle del usuario');
+            $user = null;
+
+            if ($id !== 'new') {
+                $user = $this->userRepository->findById($id, $request);
+            }
+
+            if ($user) {
+                $user->role = $user->roles->pluck('name')->first();
+            }
+
+            $roles = Role::where('name', '!=', 'super-admin')->where('name', '!=', 'providers')->where('name', '!=', 'clients')
+                ->get()
+                ->map(fn ($rol) => [
+                    "value" => $rol->name,
+                    "label" => $this->roleTranslations[$rol->name] 
+                        ?? ucfirst(str_replace(['-', '_'], ' ', $rol->name)),
+                ])
+                ->toArray();
+
+            return response()->success(
+                compact('user', 'roles'),
+                "Descripción del usuario"
+            );
         } catch (\Exception $e) {
-            return response()->error($e->getMessage(), 404);
+            //Log::error('Error en UsersController@show: ' . $e->getMessage());
+            return response()->error($e->getMessage(), 500);
         }
     }
 

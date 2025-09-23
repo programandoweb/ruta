@@ -254,6 +254,129 @@ class RoutesController extends Controller
         }
     }
 
+    public function show_ruta_menor_a_mayor(string $id)
+    {
+        try {
+            $route = Routes::with('items')->find($id);
+
+            if (!$route) {
+                return response()->success([
+                    'route' => $route,
+                ], 'Hoja de ruta vacía 1');
+            }
+
+            $iaData = [];
+            $addressListString = "";
+
+            if ($route->items->isNotEmpty()) {
+                $itemsHash = md5($route->items->pluck('id')->toJson());
+                $cacheKey = "ia_route2_plan_for_route_{$route->id}_{$itemsHash}";
+
+                $iaData = Cache::remember($cacheKey, now()->addHours(24), function () use ($route) {
+
+                    // 🔹 Quitamos origen y destino → nos quedamos solo con paradas
+                    $stops = $route->items->slice(1, -1);
+
+                    // 🔹 Ordenamos de más lejos a más cerca respecto al destino
+                    $refLat = 38.5816; // Sacramento
+                    $refLng = -121.4944;
+                    $stops = $stops->sortByDesc(function ($item) use ($refLat, $refLng) {
+                        return sqrt(pow($item->lat - $refLat, 2) + pow($item->lng - $refLng, 2));
+                    })->values();
+
+                    // 🔹 Lista de direcciones para el prompt
+                    $addresses = $stops->pluck('origin_address')->toArray();
+                    $addressList = "";
+                    foreach ($addresses as $index => $address) {
+                        $addressList .= ($index + 1) . ". " . $address . "\n";
+                    }
+                    $addressListString = $addressList;
+
+                    // 🔹 Prompt
+                    $prompt = <<<EOT
+                    Actúa como un asistente experto en logística y optimización de rutas. 
+                    Tu tarea es crear una hoja de ruta eficiente SOLO con las paradas intermedias (sin incluir origen ni destino).
+
+                    ### TAREA
+                    1. Analiza la siguiente lista de paradas.
+                    2. Genera una "Hoja de Ruta" numerada y clara para el conductor.
+                    3. Genera un "Dataset" en formato JSON válido SOLO con las paradas, en el orden indicado.
+
+                    ### DATOS DE LA RUTA
+                    - **Nombre de la Ruta:** {$route->name}
+                    - **Paradas intermedias:**
+                    {$addressList}
+
+                    ### FORMATO DE SALIDA OBLIGATORIO
+                    Proporciona la respuesta dividida en dos secciones EXACTAS, separadas por "---".
+
+                    ### Hoja de Ruta
+                    [Aquí va la descripción paso a paso, numerada.]
+
+                    ---
+                    ### Dataset JSON
+                    ```json
+                    [
+                    { "order": 1, "address": "Dirección completa de la parada 1", "lat": 36.7378, "lng": -119.7871 }
+                    ]
+                    ```
+                    EOT;
+
+                    // 🔹 Llamada a Gemini
+                    $apiKey = env('GEMINI_API_KEY');
+                    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}";
+                    $response = Http::post($url, [
+                        'contents' => [['role' => 'user', 'parts' => [['text' => $prompt]]]]
+                    ]);
+
+                    $routePlan = null;
+                    $dataset = [];
+
+                    if ($response->successful()) {
+                        $generatedText = data_get($response->json(), 'candidates.0.content.parts.0.text');
+                        if ($generatedText) {
+                            $parts = explode('---', $generatedText, 2);
+                            $routePlanText = $parts[0] ?? '';
+                            $routePlan = trim(str_replace('### Hoja de Ruta', '', $routePlanText));
+
+                            if (isset($parts[1])) {
+                                if (preg_match('/```json\s*([\s\S]*?)\s*```/', $parts[1], $matches)) {
+                                    $dataset = json_decode($matches[1], true) ?? [];
+                                }
+                            }
+                        }
+                    } else {
+                        $routePlan = "No se pudo generar la hoja de ruta. Error de la API: " . $response->body();
+                    }
+
+                    return [
+                        'hoja_de_ruta' => $routePlan,
+                        'dataset'      => $dataset,
+                    ];
+                });
+            }
+
+            $extra = [];
+            if (auth()->user()->hasRole('admin')) {
+                $drivers = \App\Models\User::whereHas('roles', function ($q) {
+                    $q->where('name', 'employees');
+                })->get();
+                $extra['drivers'] = $drivers;
+            }
+
+            return response()->success(array_merge([
+                'route' => $route,
+                'ia'    => $iaData,
+                'addressListString' => $addressListString
+            ], $extra), 'Hoja de ruta obtenida correctamente.');
+        } catch (ModelNotFoundException $e) {
+            return response()->error('La ruta solicitada no fue encontrada.', 404);
+        } catch (\Throwable $e) {
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
 
     public function show(string $id)
     {
@@ -270,6 +393,7 @@ class RoutesController extends Controller
             }
 
             $iaData = []; // Inicializamos la variable de datos de la IA
+            $addressListString="";
 
             // Paso 2: Verificamos si hay items en la ruta.
             if ($route->items->isNotEmpty()) {
@@ -277,7 +401,7 @@ class RoutesController extends Controller
                 // Paso 3: Creamos una clave de caché única para esta ruta específica y su estado actual de items.
                 // Si añades o quitas un item, el hash cambiará y la caché se regenerará automáticamente.
                 $itemsHash = md5($route->items->pluck('id')->toJson());
-                $cacheKey = "ia_route_plan_for_route_{$route->id}_{$itemsHash}";
+                $cacheKey = "ia_9route_plan_for_route_{$route->id}_{$itemsHash}";
 
                 // Paso 4: Usamos Cache::remember.
                 // Laravel buscará la clave. Si no la encuentra, ejecutará el código dentro de la función,
@@ -289,25 +413,29 @@ class RoutesController extends Controller
 
                     // a. Preparamos la lista de direcciones para el prompt
                     $addresses = $route->items->pluck('origin_address')->toArray();
+
                     $addressList = "";
                     foreach ($addresses as $index => $address) {
                         $addressList .= ($index + 1) . ". " . $address . "\n";
                     }
 
+                    $addressListString=$addressList;
+
                     // b. Preparamos el prompt
                     $prompt = <<<EOT
-                    Actúa como un asistente experto en logística y optimización de rutas. Tu tarea es crear una hoja de ruta eficiente para un conductor que debe recoger paquetes en varias ubicaciones.
+                    Actúa como un asistente experto en logística y optimización de rutas. Tu tarea es crear una hoja de ruta eficiente para un conductor que debe recoger paquetes en varias ubicaciones.⚠️ No incluyas el origen ni el destino en la hoja de ruta ni en el dataset. 
 
                     ### TAREA
                     1. Analiza la siguiente lista de direcciones de recogida.
                     2. Basado en un mapa (como Google Maps), determina el orden de visita más lógico y eficiente, empezando desde el punto de origen y terminando en el punto de destino.
                     3. Genera una "Hoja de Ruta" numerada y clara para el conductor.
                     4. Genera un "Dataset" en formato JSON válido con la lista de paradas en el orden correcto, incluyendo coordenadas geográficas estimadas (latitud y longitud).
+                    5. No incluyas ningún punto de origen ni destino.
 
                     ### DATOS DE LA RUTA
                     - **Nombre de la Ruta:** {$route->name}
-                    - **Punto de Origen:** Fresno City Hall, 2600 Fresno St, Fresno, CA 93721
-                    - **Punto de Destino:** California State Capitol, 1315 10th St, Sacramento, CA 95814
+                    - **Punto de Origen:** {$route->origin_address}
+                    - **Punto de Destino:** {$route->destination_address}
                     - **Direcciones de Recogida:**
                     {$addressList}
 
@@ -358,6 +486,7 @@ class RoutesController extends Controller
                     return [
                         'hoja_de_ruta' => $routePlan,
                         'dataset'      => $dataset,
+                        'addressListString'=>$addressListString
                     ];
                 });
 
@@ -377,6 +506,7 @@ class RoutesController extends Controller
             return response()->success(array_merge([
                 'route' => $route,
                 'ia'    => $iaData,
+                'addressListString'=>$addressListString
             ], $extra), 'Hoja de ruta obtenida correctamente.');
 
 
