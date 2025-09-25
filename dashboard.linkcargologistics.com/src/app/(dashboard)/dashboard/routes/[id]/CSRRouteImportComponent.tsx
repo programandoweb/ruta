@@ -2,11 +2,11 @@
 
 /**
  * ---------------------------------------------------
- *  Desarrollado por: Jorge Méndez - Programandoweb
- *  Correo: lic.jorgemendez@gmail.com
- *  Celular: 3115000926
- *  website: Programandoweb.net
- *  Proyecto: Ivoolve - Sistema de Rutas
+ * Desarrollado por: Jorge Méndez - Programandoweb
+ * Correo: lic.jorgemendez@gmail.com
+ * Celular: 3115000926
+ * website: Programandoweb.net
+ * Proyecto: Ivoolve - Sistema de Rutas
  * ---------------------------------------------------
  */
 
@@ -15,18 +15,20 @@ import { MdFileUpload, MdAddCircle, MdDelete } from "react-icons/md";
 import Card from "@/components/card";
 import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt } from "react-icons/fa";
 
+// Asumimos que la prop 'routes' ahora incluye 'id_direccion_item'
+interface RouteItem {
+  order: number;
+  address: string;
+  lat: number;
+  lng: number;
+  id_direccion_item: number | null; // El ID que viene del backend
+}
 
 interface Props {
-  routes: {
-    order: number;
-    address: string;
-    lat: number;
-    lng: number;
-  }[];
+  routes: RouteItem[];
   formData?: any;
   getInit?: any;
   items: any[];
-  
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
@@ -35,7 +37,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   setItems,
   routes,
   formData,
-  getInit,  
+  getInit,
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,11 +52,9 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   });
 
   const openGoogleMaps = (lat: number, lng: number) => {
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const baseUrl = isMobile
-      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
-      : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-    window.open(baseUrl, "_blank");
+    // URL mejorada para abrir directamente en la app de Google Maps en móvil
+    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    window.open(url, "_blank");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +75,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
       form.append("file", file);
 
       let BACKEND = "";
-      if (window && window.location && window.location.hostname) {
+      if (typeof window !== "undefined") {
         BACKEND = `${window.location.protocol}//${window.location.hostname}`;
         if (window.location.port) {
           BACKEND += `:${process.env.NEXT_PUBLIC_PORT}`;
@@ -112,7 +112,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   };
 
   const handleAddManual = () => {
-    setItems((prev) => [...prev, { ...newItem }]);
+    setItems((prev) => [...prev, { ...newItem, id: Date.now() }]); // Añadimos un ID temporal para el key
     setNewItem({
       name: "",
       phone: "",
@@ -127,42 +127,40 @@ const CSRRouteImportComponent: React.FC<Props> = ({
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleAccept = (idx: string, id: any) => {
+  const handleAccept = (address: string, itemId: number) => {
     formData
       .handleRequest(
         formData.backend + "/dashboard/routes/2/set-status-address",
         "post",
-        { direction: idx, status: "accept", route_items: id }
+        { direction: address, status: "accept", route_items: itemId }
       )
       .then((res: any) => {
-        setItems(res.items);
+        if (res.items) setItems(res.items);
       });
   };
 
-  const handleReject = (idx: string, id: any) => {
+  const handleReject = (address: string, itemId: number) => {
     formData
       .handleRequest(
         formData.backend + "/dashboard/routes/2/set-status-address",
         "post",
-        { direction: idx, status: "reject", route_items: id }
+        { direction: address, status: "reject", route_items: itemId }
       )
       .then((res: any) => {
-        setItems(res.items);
+        if (res.items) setItems(res.items);
       });
   };
 
   const getBorderColor = (status: string) => {
     switch (status) {
-      case "Borrador":
-        return "border-gray-400";
       case "Agendado":
         return "border-blue-500";
       case "En proceso":
         return "border-yellow-500";
       case "Rechazado":
-        return "border-red-500";
       case "Cancelado":
-        return "border-purple-500";
+        return "border-red-500";
+      case "Borrador":
       default:
         return "border-gray-300";
     }
@@ -241,18 +239,6 @@ const CSRRouteImportComponent: React.FC<Props> = ({
                 }
                 className="border rounded px-3 py-2 text-sm w-full"
               />
-              <input
-                type="text"
-                placeholder="Destino"
-                value={newItem.destination_address}
-                onChange={(e) =>
-                  setNewItem((p: any) => ({
-                    ...p,
-                    destination_address: e.target.value,
-                  }))
-                }
-                className="border rounded px-3 py-2 text-sm w-full"
-              />
             </div>
             <button
               type="button"
@@ -265,149 +251,135 @@ const CSRRouteImportComponent: React.FC<Props> = ({
         </div>
       </Card>
 
-      <Card>
-        <div className="mt-5 grid h-full md:grid-cols-2 gap-5">
-          {/* Rutas */}
-          <div>
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold text-gray-700">Ruta a seguir</h2>
-              {routes.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {routes.map((route, idx) => {
-                    
-                    let relatedItems = items.filter(
-                      (it) => it.origin_address === route.address
-                    );
-                    
-                    if(!relatedItems||relatedItems.length===0){
-                      relatedItems = items.filter(
-                        (it) => it.origin_address?.toLowerCase().includes(route.address.toLowerCase())
-                      );
-                    }
-                    
-                    const status = relatedItems[0]?.status || "Borrador";
-                    return (
-                      <div
-                        key={idx}
-                        className={`p-4 rounded-lg shadow-sm border-2 ${getBorderColor(
-                          status
-                        )} bg-white`}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-semibold text-gray-700">
-                            #{route.order}
-                          </span>
-                          <span className="text-xs text-gray-500">{status}</span>
-                        </div>
-                        <p className="text-sm text-gray-800 font-medium">
-                          {route.address}
-                        </p>
+      <div className="mt-8 grid h-full md:grid-cols-2 gap-8">
+        {/* Columna de Ruta a Seguir */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800">Ruta a seguir</h2>
+          {routes.length > 0 ? (
+            <div className="space-y-4">
+              {routes.map((route, idx) => {
+                // Lógica de búsqueda por ID, más eficiente y fiable
+                const relatedItem = items.find(
+                  (item) => item.id === route.id_direccion_item
+                );
+                const status = relatedItem?.status || "Borrador";
 
-                        <div className="mt-3 flex justify-end gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openGoogleMaps(route.lat, route.lng)}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <FaMapMarkedAlt />
-                          </button>
-
-                          
-
-                          {relatedItems.find(
-                            (s: any) => s.status === "Borrador"
-                          ) ? (
-                            <Fragment>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleAccept(route.address, relatedItems[0]?.id)
-                                }
-                                className="text-green-600 hover:text-green-800"
-                              >
-                                <FaThumbsUp />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleReject(route.address, relatedItems[0]?.id)
-                                }
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <FaThumbsDown />
-                              </button>
-                            </Fragment>
-                          ) : (
-                            <span className="text-gray-500 text-sm">{status}</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-gray-500">No hay datos de la ruta.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Items */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-gray-700">Listado de Items</h2>
-            {items.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4">
-                {items.map((item, idx) => (
+                return (
                   <div
                     key={idx}
-                    className="p-4 rounded-lg shadow-sm border border-gray-200 bg-white"
+                    className={`p-4 rounded-lg shadow-md border-l-4 ${getBorderColor(
+                      status
+                    )} bg-white`}
                   >
-                    <p className="text-sm font-semibold text-gray-800">
-                      Guía: {item.guide}
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-lg font-bold text-blue-600">
+                        #{route.order}
+                      </span>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-white bg-gray-500 px-2 py-1 rounded-full">{status}</span>
+                    </div>
+                    <p className="text-base text-gray-800 font-medium">
+                      {route.address}
                     </p>
-                    <p className="text-sm text-gray-700">Nombre: {item.name}</p>
-                    <p className="text-sm text-gray-700">Teléfono: {item.phone}</p>
 
-                    {/* Origen editable */}
-                    <div className="mt-1">
-                      <label className="block text-xs text-gray-500">Origen:</label>
-                      <input
-                        type="text"
-                        value={item.origin_address}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((it, i) =>
-                              i === idx ? { ...it, origin_address: e.target.value } : it
-                            )
-                          )
-                        }
-                        className="border rounded px-2 py-1 text-sm w-full"
-                      />
-                    </div>                    
-
-                    <p className="text-sm text-gray-700 capitalize mt-2">
-                      Tipo: {item.type}
-                    </p>
-                    <p className="text-sm text-gray-700">Estado: {item.status}</p>
-
-                    <div className="mt-2 flex justify-end">
+                    <div className="mt-4 flex justify-end items-center gap-4">
                       <button
                         type="button"
-                        onClick={() => handleDelete(idx)}
-                        className="text-red-600 hover:text-red-800"
+                        onClick={() => openGoogleMaps(route.lat, route.lng)}
+                        title="Abrir en Google Maps"
+                        className="text-blue-500 hover:text-blue-700 transition-colors"
                       >
-                        <MdDelete />
+                        <FaMapMarkedAlt size={20} />
                       </button>
+
+                      {relatedItem && relatedItem.status === "Borrador" ? (
+                        <Fragment>
+                          <button
+                            type="button"
+                            title="Aceptar"
+                            onClick={() =>
+                              handleAccept(route.address, relatedItem?.id)
+                            }
+                            className="text-green-500 hover:text-green-700 transition-colors"
+                          >
+                            <FaThumbsUp size={20} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Rechazar"
+                            onClick={() =>
+                              handleReject(route.address, relatedItem?.id)
+                            }
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                          >
+                            <FaThumbsDown size={20} />
+                          </button>
+                        </Fragment>
+                      ) : null}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No hay items en la ruta.</p>
-            )}
-          </div>
-
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-gray-500 italic">No hay una ruta generada para mostrar.</p>
+          )}
         </div>
-      </Card>
+
+        {/* Columna de Listado de Items */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800">Listado de Items</h2>
+          {items.length > 0 ? (
+            <div className="space-y-4">
+              {items.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="p-4 rounded-lg shadow-md border bg-white"
+                >
+                  {item.guide && <p className="text-sm font-semibold text-gray-800">
+                    Guía: {item.guide}
+                  </p>}
+                  <p className="text-sm text-gray-700">Nombre: {item.name}</p>
+                  <p className="text-sm text-gray-700">Teléfono: {item.phone}</p>
+
+                  <div className="mt-2">
+                    <label className="block text-xs font-medium text-gray-500">Origen:</label>
+                    <input
+                      type="text"
+                      value={item.origin_address}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((it, i) =>
+                            i === idx ? { ...it, origin_address: e.target.value } : it
+                          )
+                        )
+                      }
+                      className="border rounded px-2 py-1 text-sm w-full mt-1"
+                    />
+                  </div>
+
+                  <p className="text-sm text-gray-700 capitalize mt-2">
+                    Tipo: {item.type}
+                  </p>
+                  <p className="text-sm text-gray-700">Estado: {item.status}</p>
+
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      title="Eliminar"
+                      onClick={() => handleDelete(idx)}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      <MdDelete size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 italic">No hay items cargados en la ruta.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -2,280 +2,176 @@
 
 /**
  * ---------------------------------------------------
- *  Desarrollado por: Jorge Méndez - Programandoweb
- *  Correo: lic.jorgemendez@gmail.com
- *  Celular: 3115000926
- *  website: Programandoweb.net
- *  Proyecto: Ivoolve - Sistema de Rutas
+ * Desarrollado por: Jorge Méndez - Programandoweb
+ * Correo: lic.jorgemendez@gmail.com
+ * Celular: 3115000926
+ * website: Programandoweb.net
+ * Proyecto: Ivoolve - Sistema de Rutas
  * ---------------------------------------------------
  */
 
-import { Fragment, useState } from "react";
-import { MdFileUpload } from "react-icons/md";
+import { Fragment, useMemo, useState } from "react";
 import Card from "@/components/card";
 import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt } from "react-icons/fa";
 
+// 1. Interfaz actualizada para la prop 'routes'
+interface RouteItem {
+  order: number;
+  address: string;
+  lat: number;
+  lng: number;
+  id_direccion_item: number | null; // El ID que viene del backend
+}
+
+interface Item {
+  id: number;
+  guide: string;
+  status: string;
+  type: 'pickup' | 'deliver';
+  origin_address: string;
+  // ...otras propiedades del item
+}
+
 interface Props {
-  routes: {
-    order: number;
-    address: string;
-    lat: number;
-    lng: number;
-  }[];
+  routes: RouteItem[];
   formData?: any;
   getInit?: any;
-  items: any[];
+  items: Item[];
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
-const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, formData }) => {
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, formData }) => {
+  // 2. Optimización: Se crea un mapa para buscar items por ID de forma instantánea.
+  //    useMemo evita que este mapa se recalcule en cada render, solo si 'items' cambia.
+  const itemsById = useMemo(() => 
+    new Map(items.map(item => [item.id, item])),
+    [items]
+  );
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    setLoading(true);
-
+  // Función auxiliar para enviar mensajes de WhatsApp y evitar código repetido
+  const sendWhatsAppMessage = async (recipient: string, message: string) => {
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? JSON.parse(userStr) : null;
-      const token = user?.token || null;
-
-      const form = new FormData();
-      form.append("file", file);
-
-      let BACKEND = "";
-      if (window && window.location && window.location.hostname) {
-        BACKEND = `${window.location.protocol}//${window.location.hostname}`;
-        if (window.location.port) {
-          BACKEND += `:${process.env.NEXT_PUBLIC_PORT}`;
-        }
-        BACKEND += process.env.NEXT_PUBLIC_VERSION || "/api/v1";
-      }
-
-      if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-        BACKEND =
-          process.env.NEXT_PUBLIC_BACKEND_URL + process.env.NEXT_PUBLIC_VERSION;
-      }
-
-      const response = await fetch(BACKEND + "/routes/import-excel", {
+      const response = await fetch("https://ws-server.ivoolve.com/api/send", {
         method: "POST",
-        body: form,
-        headers: {
-          Authorization: token ? `Bearer ${token}` : "",
-        },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: recipient, message }),
       });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      const responseData = await response.json();
-
-      if (responseData?.data?.items) {
-        setItems(responseData.data.items);
-      }
-    } catch (err) {
-      console.error("Error al subir archivo:", err);
-    } finally {
-      setLoading(false);
+      const data = await response.json();
+      console.log(`📩 Mensaje enviado a ${recipient}:`, data);
+    } catch (error) {
+      console.error(`❌ Error enviando a ${recipient}:`, error);
     }
   };
 
-  const handleAccept = (idx: string, id: any) => {
+  const openGoogleMapsAndNotify = async (route: RouteItem) => {
+    // Abrir Google Maps
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${route.lat},${route.lng}&travelmode=driving`;
+    window.open(mapUrl, "_blank");
+
+    // Números a notificar
+    const recipients = [
+      "573217002700@c.us",
+      "573115000926@c.us",
+      "5215526589002@c.us",
+    ];
+    const message = `Hola, ya estamos cerca a recoger su caja en ${route.address}, por favor esté pendiente`;
+
+    // Enviar todos los mensajes en paralelo
+    await Promise.all(recipients.map(to => sendWhatsAppMessage(to, message)));
+  };
+  
+  const handleAccept = (address: string, itemId: number) => {
     formData
       .handleRequest(
-        formData.backend + "/dashboard/routes/2/set-status-address",
+        `${formData.backend}/dashboard/routes/2/set-status-address`,
         "post",
-        { direction: idx, status: "accept", route_items: id }
+        { direction: address, status: "accept", route_items: itemId }
       )
       .then((res: any) => {
-        setItems(res.items);
+        if (res.items) setItems(res.items);
       });
   };
 
-  const handleReject = (idx: string, id: any) => {
+  const handleReject = (address: string, itemId: number) => {
     formData
       .handleRequest(
-        formData.backend + "/dashboard/routes/2/set-status-address",
+        `${formData.backend}/dashboard/routes/2/set-status-address`,
         "post",
-        { direction: idx, status: "reject", route_items: id }
+        { direction: address, status: "reject", route_items: itemId }
       )
       .then((res: any) => {
-        setItems(res.items);
+        if (res.items) setItems(res.items);
       });
   };
 
-  const openGoogleMaps = async (lat: number, lng: number,address:any) => {
-    //const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const baseUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-
-    // Abrir Google Maps en nueva pestaña
-    window.open(baseUrl, "_blank");
-
-    // Enviar mensaje al endpoint
-    try {
-      const response = await fetch("https://ws-server.ivoolve.com/api/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: "573217002700@c.us",
-          message: "Hola, ya estamos cerca a recoger su caja en "+address+", por favor está pendiente",
-        }),
-      });
-
-      const data = await response.json();
-      console.log("📩 Respuesta API WhatsApp:", data);
-      
-    } catch (error) {
-      console.error("❌ Error enviando mensaje:", error);
-    }
-
-
-     try {
-      const response = await fetch("https://ws-server.ivoolve.com/api/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: "573115000926@c.us",
-          message: "Hola, ya estamos cerca a recoger su caja, por favor está pendiente",
-        }),
-      });
-
-      const data = await response.json();
-      console.log("📩 Respuesta API WhatsApp:", data);
-      
-    } catch (error) {
-      console.error("❌ Error enviando mensaje:", error);
-    }
-
-    try {
-      const response = await fetch("https://ws-server.ivoolve.com/api/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: "5215526589002@c.us",
-          message: "Hola, ya estamos cerca a recoger su caja, por favor está pendiente",
-        }),
-      });
-
-      const data = await response.json();
-      console.log("📩 Respuesta API WhatsApp:", data);
-    } catch (error) {
-      console.error("❌ Error enviando mensaje:", error);
-    }
-
-    
-
-
-
-  };
-
-  /*
-  const openGoogleMaps2 = (lat: number, lng: number) => {
-
-
-
-
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const baseUrl = isMobile
-      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
-      : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-    window.open(baseUrl, "_blank");
-
-  };
-  */
 
   return (
     <div className="">
       <Card className="shadow-lg border border-gray-100 mt-6">
-        <div className="">          
+        <div>
           {routes.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full border border-gray-200 divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm">
                 <thead className="bg-gray-100">
-                  <tr>                    
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Dirección</th>
-                    <th className="px-4 py-2 text-center text-sm font-semibold text-gray-600">Acciones</th>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Dirección y Detalles</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {routes.map((route, idx) => {
-                    //const relatedItems = items.filter((it) => it.origin_address === route.address);
-                    let relatedItems = items.filter(
-                      (it) => it.origin_address === route.address
-                    );
-                    
-                    if(!relatedItems||relatedItems.length===0){
-                      relatedItems = items.filter(
-                        (it) => it.origin_address?.toLowerCase().includes(route.address.toLowerCase())
-                      );
-                    }
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {routes.map((route) => {
+                    // 3. Lógica principal refactorizada: Búsqueda por ID en el mapa O(1).
+                    const relatedItem = itemsById.get(route.id_direccion_item!);
 
                     return (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {route.address}
-                          {relatedItems.length > 0 && (
-                            <div className="mt-1 text-xs text-gray-500 space-y-1">
-                              {relatedItems.map((it) => (
-                                <div key={it.id} className="flex flex-col">
-                                  <span><strong>ID:</strong> {it.id}</span>
-                                  <span><strong>Guía:</strong> {it.guide}</span>
-                                  <span><strong>Status:</strong> {it.status}</span>
-                                  <span><strong>Acción:</strong> {it.type==='pickup'?"Recoger Caja":"Dejar Caja"}</span>                                  
-                                </div>
-                              ))}
+                      <tr key={route.order} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 align-top">
+                          <p className="text-sm font-medium text-gray-900">{route.address}</p>
+                          {relatedItem && (
+                            <div className="mt-2 text-xs text-gray-600 border-l-2 border-blue-200 pl-2 space-y-1">
+                              <p><strong>Guía:</strong> {relatedItem.guide}</p>
+                              <p><strong>Status:</strong> <span className="font-semibold">{relatedItem.status}</span></p>
+                              <p><strong>Acción:</strong> {relatedItem.type === 'pickup' ? "Recoger Caja" : "Dejar Caja"}</p>
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-center space-x-3">
-                          <button
-                            type="button"
-                            onClick={() => openGoogleMaps(route.lat, route.lng,route.address)}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <FaMapMarkedAlt />
-                          </button>
+                        <td className="px-4 py-3 text-center align-middle">
+                          <div className="flex justify-center items-center space-x-4">
+                            <button
+                              type="button"
+                              title="Abrir Mapa y Notificar"
+                              onClick={() => openGoogleMapsAndNotify(route)}
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              <FaMapMarkedAlt size={20} />
+                            </button>
 
-                          {relatedItems.find((search: any) => search.status === "Borrador") ? (
-                            <Fragment>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleAccept(route.address, relatedItems[0]?.id)
-                                }
-                                className="text-green-600 hover:text-green-800"
-                              >
-                                <FaThumbsUp />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleReject(route.address, relatedItems[0]?.id)
-                                }
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <FaThumbsDown />
-                              </button>
-                            </Fragment>
-                          ) : (
-                            <span className="text-gray-500">
-                              {relatedItems.find((search: any) => search.status)?.status}
-                            </span>
-                          )}
+                            {/* 4. Lógica de botones simplificada */}
+                            {relatedItem && relatedItem.status === "Borrador" ? (
+                              <Fragment>
+                                <button
+                                  type="button"
+                                  title="Aceptar"
+                                  onClick={() => handleAccept(route.address, relatedItem.id)}
+                                  className="text-green-600 hover:text-green-800 transition-colors"
+                                >
+                                  <FaThumbsUp size={20} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Rechazar"
+                                  onClick={() => handleReject(route.address, relatedItem.id)}
+                                  className="text-red-600 hover:text-red-800 transition-colors"
+                                >
+                                  <FaThumbsDown size={20} />
+                                </button>
+                              </Fragment>
+                            ) : (
+                               <span className="text-xs text-gray-500 font-semibold uppercase">
+                                {relatedItem?.status}
+                               </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -284,7 +180,9 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
               </table>
             </div>
           ) : (
-            <p className="text-gray-500">No hay datos de la ruta.</p>
+            <div className="p-6 text-center text-gray-500">
+              <p>No hay datos de la ruta para mostrar.</p>
+            </div>
           )}
         </div>
       </Card>
@@ -292,4 +190,4 @@ const CSRRouteImportComponent: React.FC<Props> = ({ items, setItems, routes, for
   );
 };
 
-export default CSRRouteImportComponent;
+export default CSRRouteTableComponent;
