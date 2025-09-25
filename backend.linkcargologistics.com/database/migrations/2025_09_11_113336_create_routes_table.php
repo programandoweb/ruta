@@ -41,7 +41,7 @@ return new class extends Migration
             $table->string('origin_address');
 
             // Dirección de destino
-            $table->string('destination_address');
+            $table->string('destination_address')->nullable();
 
             // Tipo de movimiento (deliver, pickup)
             $table->enum('type', ['deliver', 'pickup']);

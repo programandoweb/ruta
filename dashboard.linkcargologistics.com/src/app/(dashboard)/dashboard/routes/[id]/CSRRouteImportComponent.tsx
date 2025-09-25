@@ -382,26 +382,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
                         }
                         className="border rounded px-2 py-1 text-sm w-full"
                       />
-                    </div>
-
-                    {/* Destino editable */}
-                    <div className="mt-1">
-                      <label className="block text-xs text-gray-500">Destino:</label>
-                      <input
-                        type="text"
-                        value={item.destination_address}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((it, i) =>
-                              i === idx
-                                ? { ...it, destination_address: e.target.value }
-                                : it
-                            )
-                          )
-                        }
-                        className="border rounded px-2 py-1 text-sm w-full"
-                      />
-                    </div>
+                    </div>                    
 
                     <p className="text-sm text-gray-700 capitalize mt-2">
                       Tipo: {item.type}

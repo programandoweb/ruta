@@ -35,7 +35,7 @@ return new class extends Migration
             $table->string('name')->nullable(); // Nombre opcional
             $table->string('phone'); // Celular
             $table->string('origin_address'); // Dirección origen
-            $table->string('destination_address'); // Dirección destino
+            $table->string('destination_address')->nullable(); // Dirección destino
             $table->enum('type', ['deliver', 'pickup']); // Dejar caja o recoger caja
             // Estado en español
             $table->enum('status', [
