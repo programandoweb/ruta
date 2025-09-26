@@ -321,7 +321,18 @@ const CSRRouteImportComponent: React.FC<Props> = ({
               })}
             </div>
           ) : (
-            <p className="text-gray-500 italic">No hay una ruta generada para mostrar.</p>
+            <div className="text-center p-6">
+              <p className="text-gray-500 italic">No hay una ruta generada para mostrar.</p>
+              
+              <button
+                type="button"
+                // Esta función recarga toda la página del navegador
+                onClick={() => window.location.reload()}
+                className="mt-4 px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition-colors"
+              >
+                Recargar Página
+              </button>
+            </div>
           )}
         </div>
 
