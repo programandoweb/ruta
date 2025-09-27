@@ -559,12 +559,11 @@ class RoutesController extends Controller
 
                     // 2. Preparamos una lista de los items originales para poder "consumirlos".
                     //    Usamos keyBy('id') para poder eliminar items fácilmente una vez que los asignamos.
-                    $availableItems = $route->items->keyBy('id')->all();
-
+                    $availableItems     =   $route->items->keyBy('id')->all();
+                    $availableItems2    =   $route->items->keyBy('origin_address')->all();
                     // 3. Recorremos el dataset de la IA para enriquecerlo.
                     $augmentedDataset = $iaData['dataset'];
                     foreach ($augmentedDataset as &$iaItem) { // Usamos '&' para modificar el array directamente.
-                        
                         $iaItem['id_direccion_item'] = null; // Valor por defecto
                         $bestMatchId = null;
                         $highestSimilarity = 0;
@@ -582,15 +581,19 @@ class RoutesController extends Controller
 
                             // Si esta es la mejor coincidencia que hemos encontrado hasta ahora, la guardamos.
                             if ($percent > $highestSimilarity) {
-                                $highestSimilarity = $percent;
-                                $bestMatchId = $itemId;
+                                
+                                $highestSimilarity  =   $percent;
+                                $bestMatchId        =   $itemId;                                
                             }
                         }
 
                         // 5. Si la mejor coincidencia que encontramos supera nuestro umbral...
                         if ($highestSimilarity >= $similarityThreshold) {
+
+                            $routeItem2025      =   RouteItem::where('id', $bestMatchId)->first();
                             // ...la asignamos...
-                            $iaItem['id_direccion_item'] = $bestMatchId;
+                            $iaItem['id_direccion_item']        = $bestMatchId;
+                            $iaItem['origen_real']              = $routeItem2025->origin_address;
                             // ...¡y la eliminamos de la lista de items disponibles!
                             // Esto es CRUCIAL para manejar direcciones duplicadas correctamente.
                             unset($availableItems[$bestMatchId]);
@@ -616,7 +619,7 @@ class RoutesController extends Controller
                 'route' => $route,
                 'ia'    => $iaData, // $iaData ahora contiene el dataset con 'id_direccion_item'
                 'addressListString' => $addressListString
-            ], $extra), 'Hoja de ruta obtenida correctamente 2026.');
+            ], $extra), 'Hoja de ruta obtenida correctamente 2026. Agua');
 
         } catch (\Throwable $e) {
             // Atrapa cualquier error inesperado

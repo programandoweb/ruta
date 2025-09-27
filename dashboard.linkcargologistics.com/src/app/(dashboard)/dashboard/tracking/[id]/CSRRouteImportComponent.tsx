@@ -21,6 +21,7 @@ interface RouteItem {
   lat: number;
   lng: number;
   id_direccion_item: number | null; // El ID que viene del backend
+  origen_real:string;
 }
 
 interface Item {
@@ -29,6 +30,7 @@ interface Item {
   status: string;
   type: 'pickup' | 'deliver';
   origin_address: string;
+  origen_real:string;
   // ...otras propiedades del item
 }
 
@@ -64,10 +66,23 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
   };
 
   const openGoogleMapsAndNotify = async (route: RouteItem) => {
+    // 1. Validar que el objeto route y la dirección existan.
+    if (!route || !route.address) {
+      console.error("El objeto 'route' o la 'address' no son válidos.");
+      return;
+    }
+
+    const encodedAddress = encodeURIComponent(route.address);
+    // 3. Crear una URL de búsqueda estándar y robusta para Google Maps.
+      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      
+    
     // Abrir Google Maps
-    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${route.lat},${route.lng}&travelmode=driving`;
+    //const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${route.lat},${route.lng}&travelmode=driving`;
     window.open(mapUrl, "_blank");
 
+    console.log(route)
+    return;
     // Números a notificar
     const recipients = [
       "573217002700@c.us",
@@ -122,13 +137,14 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                   {routes.map((route) => {
                     // 3. Lógica principal refactorizada: Búsqueda por ID en el mapa O(1).
                     const relatedItem = itemsById.get(route.id_direccion_item!);
-
+                    //console.log(route)
                     return (
                       <tr key={route.order} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 align-top">
-                          <p className="text-sm font-medium text-gray-900">{route.address}</p>
+                          <p className="text-sm font-medium text-gray-900">Dirección Real: {route.origen_real} </p>
                           {relatedItem && (
                             <div className="mt-2 text-xs text-gray-600 border-l-2 border-blue-200 pl-2 space-y-1">
+                              <p><strong>Dirección IA:</strong> {route.address}</p>
                               <p><strong>Guía:</strong> {relatedItem.guide}</p>
                               <p><strong>Status:</strong> <span className="font-semibold">{relatedItem.status}</span></p>
                               <p><strong>Acción:</strong> {relatedItem.type === 'pickup' ? "Recoger Caja" : "Dejar Caja"}</p>
