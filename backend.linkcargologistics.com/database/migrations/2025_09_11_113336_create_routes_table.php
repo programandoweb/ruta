@@ -26,10 +26,17 @@ return new class extends Migration
 
             // Relación con usuario creador (opcional)
             $table->unsignedInteger('user_id')->nullable();
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('user_id')
+                ->references('id')
+                ->on('users')
+                ->onDelete('set null');
 
+            // Relación con empleado asignado (opcional)
             $table->unsignedInteger('employees_id')->nullable();
-            $table->foreign('employees_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('employees_id')
+                ->references('id')
+                ->on('users')
+                ->onDelete('set null');
 
             // Nombre de la ruta (opcional)
             $table->string('name')->nullable();
@@ -48,6 +55,9 @@ return new class extends Migration
 
             // Fecha programada
             $table->date('date')->nullable();
+
+            // 🔹 Campo para guardar el JSON en BD
+            $table->json('cache_json')->nullable();
 
             $table->timestamps();
         });

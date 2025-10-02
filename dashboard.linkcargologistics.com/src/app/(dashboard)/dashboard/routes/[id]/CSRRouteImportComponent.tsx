@@ -1,32 +1,22 @@
 "use client";
 
-/**
- * ---------------------------------------------------
- * Desarrollado por: Jorge Méndez - Programandoweb
- * Correo: lic.jorgemendez@gmail.com
- * Celular: 3115000926
- * website: Programandoweb.net
- * Proyecto: Ivoolve - Sistema de Rutas
- * ---------------------------------------------------
- */
-
-import { Fragment, useState } from "react";
-import { MdFileUpload, MdAddCircle, MdDelete } from "react-icons/md";
+import { useState } from "react";
 import Card from "@/components/card";
-import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt } from "react-icons/fa";
+import RouteMap from "@/components/RouteMap/RouteMap";
+import RouteListColumn from "./RouteListColumn";
+import ItemsListColumn from "./ItemsListColumn";
 
-// Asumimos que la prop 'routes' ahora incluye 'id_direccion_item'
 interface RouteItem {
   order: number;
   address: string;
   lat: number;
   lng: number;
-  id_direccion_item: number | null; // El ID que viene del backend
+  id_direccion_item: number | null;
 }
 
 interface Props {
   routes: RouteItem[];
-  formData?: any;
+  formData: any; // viene del padre
   getInit?: any;
   items: any[];
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
@@ -35,120 +25,20 @@ interface Props {
 const CSRRouteImportComponent: React.FC<Props> = ({
   items,
   setItems,
-  routes,
+  routes: initialRoutes,
   formData,
-  getInit,
 }) => {
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const [newItem, setNewItem] = useState<any>({
-    name: "",
-    phone: "",
-    origin_address: "",
-    destination_address: "",
-    type: "deliver",
-    status: "Borrador",
-  });
+  const [routes, setRoutes] = useState<RouteItem[]>(initialRoutes);
+  const [expandedItems, setExpandedItems] = useState<number[]>([]);
 
   const openGoogleMaps = (lat: number, lng: number) => {
-    // URL mejorada para abrir directamente en la app de Google Maps en móvil
-    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    window.open(url, "_blank");
+    window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, "_blank");
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    setLoading(true);
-    try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? JSON.parse(userStr) : null;
-      const token = user?.token || null;
-
-      const form = new FormData();
-      form.append("file", file);
-
-      let BACKEND = "";
-      if (typeof window !== "undefined") {
-        BACKEND = `${window.location.protocol}//${window.location.hostname}`;
-        if (window.location.port) {
-          BACKEND += `:${process.env.NEXT_PUBLIC_PORT}`;
-        }
-        BACKEND += process.env.NEXT_PUBLIC_VERSION || "/api/v1";
-      }
-
-      if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-        BACKEND =
-          process.env.NEXT_PUBLIC_BACKEND_URL + process.env.NEXT_PUBLIC_VERSION;
-      }
-
-      const response = await fetch(BACKEND + "/routes/import-excel", {
-        method: "POST",
-        body: form,
-        headers: {
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      const responseData = await response.json();
-      if (responseData?.data?.items) {
-        setItems(responseData.data.items);
-      }
-    } catch (err) {
-      console.error("Error al subir archivo:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddManual = () => {
-    setItems((prev) => [...prev, { ...newItem, id: Date.now() }]); // Añadimos un ID temporal para el key
-    setNewItem({
-      name: "",
-      phone: "",
-      origin_address: "",
-      destination_address: "",
-      type: "deliver",
-      status: "Borrador",
-    });
-  };
-
-  const handleDelete = (idx: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleAccept = (address: string, itemId: number) => {
-    formData
-      .handleRequest(
-        formData.backend + "/dashboard/routes/2/set-status-address",
-        "post",
-        { direction: address, status: "accept", route_items: itemId }
-      )
-      .then((res: any) => {
-        if (res.items) setItems(res.items);
-      });
-  };
-
-  const handleReject = (address: string, itemId: number) => {
-    formData
-      .handleRequest(
-        formData.backend + "/dashboard/routes/2/set-status-address",
-        "post",
-        { direction: address, status: "reject", route_items: itemId }
-      )
-      .then((res: any) => {
-        if (res.items) setItems(res.items);
-      });
+  const toggleExpand = (idx: number) => {
+    setExpandedItems((prev) =>
+      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
+    );
   };
 
   const getBorderColor = (status: string) => {
@@ -166,229 +56,51 @@ const CSRRouteImportComponent: React.FC<Props> = ({
     }
   };
 
+  // 🔹 recibe rutas reordenadas desde RouteListColumn
+  const handleReorder = (updatedRoutes: RouteItem[]) => {
+    setRoutes(updatedRoutes);
+
+    // 👇 Aquí haces el submit al backend
+    formData
+      .handleRequest(
+        formData.backend + location.pathname + "/reorder", // ruta backend (ej: /dashboard/routes/{id}/reorder)
+        "put",
+        { routes: updatedRoutes } // enviamos la nueva lista
+      )
+      .then((res: any) => {
+        console.log("Orden actualizado en backend:", res);
+        // refrescamos la data si quieres
+        //if (typeof getInit === "function") getInit();
+      });
+  };
+
   return (
     <div className="mt-5">
-      <Card className="shadow-lg border border-gray-100">
-        <div className="p-6 space-y-6">
-          {/* Input y carga de archivo */}
-          {routes.length === 0 && (
-            <Fragment>
-              <h2 className="text-xl font-bold text-gray-700 flex items-center gap-2">
-                <MdFileUpload className="text-blue-600 text-2xl" />
-                Importar Items desde Excel o agregar manualmente
-              </h2>
-              <input
-                type="file"
-                accept=".xls,.xlsx"
-                onChange={handleFileChange}
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4
-                  file:rounded-lg file:border-0 file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-              <button
-                type="button"
-                onClick={handleUpload}
-                disabled={!file || loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? "Subiendo..." : "Subir y Procesar"}
-              </button>
-            </Fragment>
-          )}
+      <Card className="shadow-lg border border-gray-100" />
 
-          {/* Agregar manual */}
-          <div
-            className={
-              routes.length === 0
-                ? "mt-8 space-y-4 border-t pt-6"
-                : "mt-0 space-y-4 pt-6"
-            }
-          >
-            <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-              <MdAddCircle className="text-green-600 text-xl" />
-              Agregar Item Manualmente
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <input
-                type="text"
-                placeholder="Nombre"
-                value={newItem.name}
-                onChange={(e) =>
-                  setNewItem((p: any) => ({ ...p, name: e.target.value }))
-                }
-                className="border rounded px-3 py-2 text-sm w-full"
-              />
-              <input
-                type="text"
-                placeholder="Teléfono"
-                value={newItem.phone}
-                onChange={(e) =>
-                  setNewItem((p: any) => ({ ...p, phone: e.target.value }))
-                }
-                className="border rounded px-3 py-2 text-sm w-full"
-              />
-              <input
-                type="text"
-                placeholder="Origen"
-                value={newItem.origin_address}
-                onChange={(e) =>
-                  setNewItem((p: any) => ({
-                    ...p,
-                    origin_address: e.target.value,
-                  }))
-                }
-                className="border rounded px-3 py-2 text-sm w-full"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleAddManual}
-              className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-            >
-              Agregar
-            </button>
-          </div>
-        </div>
-      </Card>
-
-      <div className="mt-8 grid h-full md:grid-cols-2 gap-8">
+      <div className="mt-8 grid h-full md:grid-cols-3 gap-8">
         {/* Columna de Ruta a Seguir */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800">Ruta a seguir</h2>
-          {routes.length > 0 ? (
-            <div className="space-y-4">
-              {routes.map((route, idx) => {
-                // Lógica de búsqueda por ID, más eficiente y fiable
-                const relatedItem = items.find(
-                  (item) => item.id === route.id_direccion_item
-                );
-                const status = relatedItem?.status || "Borrador";
-
-                return (
-                  <div
-                    key={idx}
-                    className={`p-4 rounded-lg shadow-md border-l-4 ${getBorderColor(
-                      status
-                    )} bg-white`}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-lg font-bold text-blue-600">
-                        #{route.order}
-                      </span>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-white bg-gray-500 px-2 py-1 rounded-full">{status}</span>
-                    </div>
-                    <p className="text-base text-gray-800 font-medium">
-                      {route.address}
-                    </p>
-
-                    <div className="mt-4 flex justify-end items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() => openGoogleMaps(route.lat, route.lng)}
-                        title="Abrir en Google Maps"
-                        className="text-blue-500 hover:text-blue-700 transition-colors"
-                      >
-                        <FaMapMarkedAlt size={20} />
-                      </button>
-
-                      {relatedItem && relatedItem.status === "Borrador" ? (
-                        <Fragment>
-                          <button
-                            type="button"
-                            title="Aceptar"
-                            onClick={() =>
-                              handleAccept(route.address, relatedItem?.id)
-                            }
-                            className="text-green-500 hover:text-green-700 transition-colors"
-                          >
-                            <FaThumbsUp size={20} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Rechazar"
-                            onClick={() =>
-                              handleReject(route.address, relatedItem?.id)
-                            }
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                          >
-                            <FaThumbsDown size={20} />
-                          </button>
-                        </Fragment>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center p-6">
-              <p className="text-gray-500 italic">No hay una ruta generada para mostrar.</p>
-              
-              <button
-                type="button"
-                // Esta función recarga toda la página del navegador
-                onClick={() => window.location.reload()}
-                className="mt-4 px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition-colors"
-              >
-                Recargar Página
-              </button>
-            </div>
-          )}
-        </div>
+        <RouteListColumn
+          routes={routes}
+          items={items}
+          openGoogleMaps={openGoogleMaps}
+          getBorderColor={getBorderColor}
+          onReorder={handleReorder} // 👈 callback
+        />
 
         {/* Columna de Listado de Items */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800">Listado de Items</h2>
-          {items.length > 0 ? (
-            <div className="space-y-4">
-              {items.map((item, idx) => (
-                <div
-                  key={item.id || idx}
-                  className="p-4 rounded-lg shadow-md border bg-white"
-                >
-                  {item.guide && <p className="text-sm font-semibold text-gray-800">
-                    Guía: {item.guide}
-                  </p>}
-                  <p className="text-sm text-gray-700">Nombre: {item.name}</p>
-                  <p className="text-sm text-gray-700">Teléfono: {item.phone}</p>
+        <ItemsListColumn
+          items={items}
+          expandedItems={expandedItems}
+          toggleExpand={toggleExpand}
+          handleDelete={(idx) => setItems((prev) => prev.filter((_, i) => i !== idx))}
+          setItems={setItems}
+        />
 
-                  <div className="mt-2">
-                    <label className="block text-xs font-medium text-gray-500">Origen:</label>
-                    <input
-                      type="text"
-                      value={item.origin_address}
-                      onChange={(e) =>
-                        setItems((prev) =>
-                          prev.map((it, i) =>
-                            i === idx ? { ...it, origin_address: e.target.value } : it
-                          )
-                        )
-                      }
-                      className="border rounded px-2 py-1 text-sm w-full mt-1"
-                    />
-                  </div>
-
-                  <p className="text-sm text-gray-700 capitalize mt-2">
-                    Tipo: {item.type}
-                  </p>
-                  <p className="text-sm text-gray-700">Estado: {item.status}</p>
-
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      type="button"
-                      title="Eliminar"
-                      onClick={() => handleDelete(idx)}
-                      className="text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      <MdDelete size={20} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 italic">No hay items cargados en la ruta.</p>
-          )}
+        {/* Mapa */}
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Mapa de la Ruta</h2>
+          <RouteMap routes={routes} />
         </div>
       </div>
     </div>

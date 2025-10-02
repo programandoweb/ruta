@@ -390,6 +390,156 @@ class RoutesController extends Controller
                 ], 'Hoja de ruta vacía 1');
             }
 
+            $iaData = []; 
+            $addressListString = "";
+
+            // Paso 2: Verificamos si hay items en la ruta.
+            if ($route->items->isNotEmpty()) {
+
+                // 🔹 Si ya existe cache_json en BD, lo usamos
+                if (!empty($route->cache_json)) {
+                    $iaData = json_decode($route->cache_json, true);
+                } else {
+                    // 🔹 Caso contrario, generamos con Gemini (la lógica original con Cache::remember)
+
+                    $itemsHash  = md5($route->items->pluck('id')->toJson());
+                    $cacheKey   = "ia_9route_plan_for_route_{$route->id}_{$itemsHash}";
+
+                    $iaData = Cache::remember($cacheKey, now()->addHours(24), function () use ($route, &$addressListString) {
+                        // a. Preparamos la lista de direcciones
+                        $addresses = $route->items->pluck('origin_address')->toArray();
+                        $addressList = "";
+                        foreach ($addresses as $index => $address) {
+                            $addressList .= ($index + 1) . ". " . $address . "\n";
+                        }
+                        $addressListString = $addressList;
+
+                        // b. Prompt
+                        $prompt = <<<EOT
+                        Actúa como un asistente experto en logística y optimización de rutas...
+                        (todo tu prompt original aquí)
+                        EOT;
+
+                        $apiKey = env('GEMINI_API_KEY');
+                        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+                        $response = Http::timeout(150)->post($url, [
+                            'contents' => [[ 'role' => 'user', 'parts' => [['text' => $prompt]] ]]
+                        ]);
+
+                        $routePlan = null;
+                        $dataset = [];
+
+                        if ($response->successful()) {
+                            $generatedText = data_get($response->json(), 'candidates.0.content.parts.0.text');
+                            if ($generatedText) {
+                                $parts = explode('---', $generatedText, 2);
+                                $routePlanText = $parts[0] ?? '';
+                                $routePlan = trim(str_replace('### Hoja de Ruta', '', $routePlanText));
+
+                                if (isset($parts[1])) {
+                                    if (preg_match('/```json\s*([\s\S]*?)\s*```/', $parts[1], $matches)) {
+                                        $dataset = json_decode($matches[1], true) ?? [];
+                                    }
+                                }
+                            }
+                        } else {
+                            $routePlan = "No se pudo generar la hoja de ruta. Error de la API: " . $response->body();
+                        }
+
+                        return [
+                            'hoja_de_ruta' => $routePlan,
+                            'dataset'      => $dataset,
+                            'addressListString' => $addressListString
+                        ];
+                    });
+
+                    // 🔹 Guardamos en la BD el resultado como JSON persistente
+                    $route->cache_json = json_encode($iaData, JSON_UNESCAPED_UNICODE);
+                    $route->save();
+                }
+
+                // 🔹 Enriquecimiento del dataset con id_direccion_item (tu código actual)
+                if (!empty($iaData['dataset'])) {
+                    $normalizeAddress = function ($address) {
+                        $address = strtolower($address);
+                        $replacements = [
+                            ' apt ' => ' apartment ', ' ave ' => ' avenue ', ' st ' => ' street ',
+                            ' ln ' => ' lane ', ' dr ' => ' drive ', ' ct ' => ' court ',
+                            ' cal ' => ' ca ', ' usa' => ''
+                        ];
+                        $address = str_replace(array_keys($replacements), array_values($replacements), " $address ");
+                        $address = preg_replace('/[^\p{L}\p{N}\s]/u', '', $address);
+                        return trim(preg_replace('/\s+/', ' ', $address));
+                    };
+
+                    $availableItems = $route->items->keyBy('id')->all();
+
+                    $augmentedDataset = $iaData['dataset'];
+                    foreach ($augmentedDataset as &$iaItem) {
+                        $iaItem['id_direccion_item'] = null;
+                        $bestMatchId = null;
+                        $highestSimilarity = 0;
+                        $similarityThreshold = 85; 
+
+                        $normalizedIaAddress = $normalizeAddress($iaItem['address']);
+
+                        foreach ($availableItems as $itemId => $dbItem) {
+                            $normalizedDbAddress = $normalizeAddress($dbItem->origin_address);
+                            similar_text($normalizedIaAddress, $normalizedDbAddress, $percent);
+
+                            if ($percent > $highestSimilarity) {
+                                $highestSimilarity = $percent;
+                                $bestMatchId = $itemId;
+                            }
+                        }
+
+                        if ($highestSimilarity >= $similarityThreshold) {
+                            $iaItem['id_direccion_item'] = $bestMatchId;
+                            unset($availableItems[$bestMatchId]);
+                        }
+                    }
+                    unset($iaItem);
+
+                    $iaData['dataset'] = $augmentedDataset;
+
+                    // 🔹 Importante: guardamos la versión enriquecida de nuevo en BD
+                    $route->cache_json = json_encode($iaData, JSON_UNESCAPED_UNICODE);
+                    $route->save();
+                }
+            }
+
+            $extra = [];
+            if (auth()->user()->hasRole('admin')) {
+                $drivers = \App\Models\User::whereHas('roles', function ($q) {
+                    $q->where('name', 'employees');
+                })->get();
+                $extra['drivers'] = $drivers;
+            }
+
+            return response()->success(array_merge([
+                'route' => $route,
+                'ia'    => $iaData,
+                'addressListString' => $addressListString
+            ], $extra), 'Hoja de ruta obtenida correctamente con cache_json en BD');
+
+        } catch (\Throwable $e) {
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
+    public function show_cache_fisico(string $id)
+    {
+        try {
+            // Paso 1: Cargamos la ruta con sus items.
+            $route = Routes::with('items')->find($id);
+
+            if (!$route) {
+                return response()->success([
+                    'route'  => $route,
+                ], 'Hoja de ruta vacía 1');
+            }
+
             $iaData = []; // Inicializamos la variable de datos de la IA
             $addressListString = "";
 
@@ -614,6 +764,8 @@ class RoutesController extends Controller
                 })->get();
                 $extra['drivers'] = $drivers;
             }
+
+
 
             return response()->success(array_merge([
                 'route' => $route,
@@ -904,4 +1056,39 @@ class RoutesController extends Controller
             return response()->error('Ocurrió un error en el servidor: ' . $e->getMessage(), 500);
         }
     }
+
+
+     /**
+     * PUT /routes/{id}/reorder
+     */
+    public function reorder(Request $request, $id)
+    {
+        $route = Routes::findOrFail($id);
+
+        $validated = $request->validate([
+            'routes' => 'required|array',
+            'routes.*.order' => 'required|integer',
+            'routes.*.address' => 'required|string',
+            'routes.*.lat' => 'required|numeric',
+            'routes.*.lng' => 'required|numeric',
+            'routes.*.id_direccion_item' => 'nullable|integer',
+        ]);
+
+        $cache = $route->cache_json ? json_decode($route->cache_json, true) : [];
+        if (!is_array($cache)) {
+            $cache = [];
+        }
+
+        $cache['dataset'] = $validated['routes'];
+
+        $route->cache_json = json_encode($cache, JSON_UNESCAPED_UNICODE);
+        $route->save();
+
+        return response()->success([
+            'route'  => $route,
+            'ia'     => $cache,
+            'routes' => $validated['routes'],
+        ], 'Orden de la ruta actualizado correctamente');
+    }
+
 }
