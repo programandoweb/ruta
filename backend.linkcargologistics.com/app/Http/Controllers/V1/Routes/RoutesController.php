@@ -380,6 +380,9 @@ class RoutesController extends Controller
 
     public function show(string $id)
     {
+
+        
+
         try {
             // Paso 1: Cargamos la ruta con sus items.
             $route = Routes::with('items')->find($id);
@@ -400,6 +403,7 @@ class RoutesController extends Controller
                 if (!empty($route->cache_json)) {
                     $iaData = json_decode($route->cache_json, true);
                 } else {
+                    return $this->show_cache_fisico($id);
                     // 🔹 Caso contrario, generamos con Gemini (la lógica original con Cache::remember)
 
                     $itemsHash  = md5($route->items->pluck('id')->toJson());
@@ -545,9 +549,8 @@ class RoutesController extends Controller
 
             // Paso 2: Verificamos si hay items en la ruta.
             if ($route->items->isNotEmpty()) {
-                
                 // Paso 3: Creamos clave de caché única.
-                $itemsHash  =   md5($route->items->pluck('id')->toJson());
+                $itemsHash  =   rand(200,600).md5($route->items->pluck('id')->toJson());
                 $cacheKey   =   "ia_9route_plan_for_route_{$route->id}_{$itemsHash}";
                 
                 // Para no usar cache, descomenta la siguiente línea
@@ -765,7 +768,8 @@ class RoutesController extends Controller
                 $extra['drivers'] = $drivers;
             }
 
-
+            $route->cache_json = json_encode($iaData, JSON_UNESCAPED_UNICODE);
+            $route->save();
 
             return response()->success(array_merge([
                 'route' => $route,

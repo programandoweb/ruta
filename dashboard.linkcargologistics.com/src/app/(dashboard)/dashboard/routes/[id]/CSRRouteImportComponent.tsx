@@ -5,6 +5,7 @@ import Card from "@/components/card";
 import RouteMap from "@/components/RouteMap/RouteMap";
 import RouteListColumn from "./RouteListColumn";
 import ItemsListColumn from "./ItemsListColumn";
+import ExcelUploadForm from "./ExcelUploadForm";
 
 interface RouteItem {
   order: number;
@@ -76,18 +77,13 @@ const CSRRouteImportComponent: React.FC<Props> = ({
 
   return (
     <div className="mt-5">
-      <Card className="shadow-lg border border-gray-100" />
+      <Card className="shadow-lg border border-gray-100 p-4" >
+      {/* Componente separado para carga de Excel */}
+      <ExcelUploadForm setItems={setItems} />
+      </Card>
 
       <div className="mt-8 grid h-full md:grid-cols-3 gap-8">
-        {/* Columna de Ruta a Seguir */}
-        <RouteListColumn
-          routes={routes}
-          items={items}
-          openGoogleMaps={openGoogleMaps}
-          getBorderColor={getBorderColor}
-          onReorder={handleReorder} // 👈 callback
-        />
-
+        
         {/* Columna de Listado de Items */}
         <ItemsListColumn
           items={items}
@@ -95,6 +91,15 @@ const CSRRouteImportComponent: React.FC<Props> = ({
           toggleExpand={toggleExpand}
           handleDelete={(idx) => setItems((prev) => prev.filter((_, i) => i !== idx))}
           setItems={setItems}
+        />
+
+        {/* Columna de Ruta a Seguir */}
+        <RouteListColumn
+          routes={routes}
+          items={items}
+          openGoogleMaps={openGoogleMaps}
+          getBorderColor={getBorderColor}
+          onReorder={handleReorder} // 👈 callback
         />
 
         {/* Mapa */}
