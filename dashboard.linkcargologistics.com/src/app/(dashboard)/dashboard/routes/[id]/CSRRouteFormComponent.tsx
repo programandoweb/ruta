@@ -44,6 +44,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const [count, setCount] = useState<number>(0);
 
   const getInit = () => {
+    if (location.pathname.endsWith("/new")) return;
     setLoading(true);
     formData
       .handleRequest(formData.backend + location.pathname)
@@ -55,12 +56,14 @@ const CSRRouteFormComponent: React.FC<any> = () => {
         if (response && response.ia && response.ia.dataset) {
           setRoutes(response.ia.dataset);
         }else{
+          /*
           if (count < 5) {
             setCount(prev => prev + 1);
             return getInit();
           } else {
             setLoading(false);
-          }     
+          }   
+          */  
         }
         if (response && response[prefixed] && response[prefixed].items) {
           setItems(response[prefixed].items);
@@ -69,7 +72,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
           setDrivers(response.drivers);
         }
       })
-      //.finally(() => setLoading(false));
+      .finally(() => setLoading(false));
   };
 
   useEffect(getInit, []);
@@ -92,11 +95,40 @@ const CSRRouteFormComponent: React.FC<any> = () => {
       });
   };
 
+  const requestIa = () => {
+    setLoading(true);
+    formData
+      .handleRequest(formData.backend + location.pathname)
+      .then((response: any) => {
+        
+        if (response && response.ia && response.ia.dataset) {
+          setRoutes(response.ia.dataset);
+        }else{
+          /*
+          if (count < 5) {
+            setCount(prev => prev + 1);
+            return getInit();
+          } else {
+            setLoading(false);
+          }   
+          */  
+        }        
+      })
+      //.finally(() => setLoading(false));
+  };
 
+  useEffect(()=>{
+    if(items.length>0 && routes.length===0){
+      console.log(items.length)
+      return;
+    }
+  },[items])
 
   if(loading){
     return <div className="mt-5 grid h-full grid-cols-1 gap-5">Esperando por la IA...</div>
   }
+
+  
 
   return (
     <div className="mt-5 grid h-full grid-cols-1 gap-5">
