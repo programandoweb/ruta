@@ -108,7 +108,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                     Cargando rutas...
                   </div>
                 ) : (
-                  <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes}  items={items} setItems={setItems} />
+                  <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes} inputs={inputs}  items={items} setItems={setItems} />
                 )}
                 <RouteFormActions />
               </Fragment>

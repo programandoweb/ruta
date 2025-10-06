@@ -15,8 +15,10 @@ namespace App\Http\Controllers\V1\Routes;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\RouteItem;
+use App\Models\Routes;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class RouteItemsController extends Controller
 {
@@ -112,7 +114,7 @@ class RouteItemsController extends Controller
      * POST /routes/import-excel
      * Procesa un archivo Excel de items
      */
-    public function importExcel(Request $request)
+    public function importExcelOld(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
@@ -142,9 +144,81 @@ class RouteItemsController extends Controller
 
             }
 
+            /*
+                Si tiene $request->route_id, procedemos a guardar de una vez ese listado en route
+            */
+            if($request->has("route_id")){
+                $route = Routes::find($request->route_id);
+
+            }
+                
+
             return response()->success(compact('items'), 'Archivo procesado correctamente.');
         } catch (\Throwable $e) {
             return response()->error($e->getMessage(), 500);
         }
     }
+
+
+    public function importExcel(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            $validator = Validator::make($request->all(), [
+                'file' => 'required|file|mimes:xls,xlsx|max:5120',
+                'route_id' => 'required|exists:routes,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->error($validator->errors()->first(), 422);
+            }
+
+            // ✅ Leer archivo Excel directamente (sin usar realPath)
+            $rows = Excel::toArray([], $request->file('file'))[0] ?? [];
+            $items = [];
+
+            foreach ($rows as $index => $row) {
+                if ($index === 0 || empty($row[2])) continue; // saltar encabezados vacíos
+
+                $items[] = [
+                    'guide'               => $row[0] ?? null,
+                    'name'                => $row[1] ?? null,
+                    'phone'               => isset($row[2]) ? (string) $row[2] : '',
+                    'origin_address'      => $row[3] ?? '',
+                    'destination_address' => $row[4] ?? '',
+                    'type'                => $row[5] ?? 'deliver',
+                    'status'              => $row[6] ?? 'Borrador',
+                ];
+            }
+
+            if (empty($items)) {
+                return response()->error('El archivo no contiene registros válidos.', 422);
+            }
+
+            // ✅ Guardar los items en la ruta asociada
+            $route = Routes::findOrFail($request->route_id);
+
+            // Eliminar items previos antes de registrar los nuevos
+            $route->items()->delete();
+
+            // Crear los nuevos items importados
+            $route->items()->createMany($items);
+
+            DB::commit();
+
+            return response()->success(
+                [
+                    'route' => $route,
+                    'items_imported' => count($items),
+                    'message' => 'Items importados y guardados correctamente en la ruta.'
+                ],
+                'Items importados y guardados correctamente en la ruta.'
+            );
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
 }

@@ -21,6 +21,7 @@ interface Props {
   getInit?: any;
   items: any[];
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
+  inputs?:any;
 }
 
 const CSRRouteImportComponent: React.FC<Props> = ({
@@ -28,6 +29,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   setItems,
   routes: initialRoutes,
   formData,
+  inputs
 }) => {
   const [routes, setRoutes] = useState<RouteItem[]>(initialRoutes);
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
@@ -79,7 +81,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
     <div className="mt-5">
       <Card className="shadow-lg border border-gray-100 p-4" >
       {/* Componente separado para carga de Excel */}
-      <ExcelUploadForm setItems={setItems} />
+      <ExcelUploadForm setItems={setItems} route_id={inputs?.id}/>
       </Card>
 
       <div className="mt-8 grid h-full md:grid-cols-3 gap-8">

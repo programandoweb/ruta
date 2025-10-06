@@ -14,9 +14,10 @@ import { useState } from "react";
 
 interface Props {
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
+  route_id:any;
 }
 
-const ExcelUploadForm: React.FC<Props> = ({ setItems }) => {
+const ExcelUploadForm: React.FC<Props> = ({ setItems, route_id }) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +38,8 @@ const ExcelUploadForm: React.FC<Props> = ({ setItems }) => {
 
       const form = new FormData();
       form.append("file", file);
+      form.append("route_id", route_id);
+      
 
       let BACKEND = "";
       if (window && window.location && window.location.hostname) {
@@ -63,8 +66,10 @@ const ExcelUploadForm: React.FC<Props> = ({ setItems }) => {
       if (!response.ok) throw new Error("Upload failed");
 
       const responseData = await response.json();
-      if (responseData?.data?.items) {
-        setItems(responseData.data.items);
+
+      if (responseData?.data?.items_imported) {
+        document.location.reload();
+        //setItems(responseData.data.items);
       }
     } catch (err) {
       console.error("Error al subir archivo:", err);
