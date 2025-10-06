@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
+use App\Jobs\GenerateRouteCacheJob;
+
 
 
 
@@ -378,6 +380,39 @@ class RoutesController extends Controller
         }
     }
 
+    /**
+     * GET /dashboard/routes/{id}/status
+     * Consulta el estado del procesamiento de IA
+     */
+    public function iaStatus(string $id)
+    {
+        try {
+            $route = Routes::select('id', 'name', 'ia_status', 'cache_json')->find($id);
+
+            if (!$route) {
+                return response()->error('Ruta no encontrada.', 404);
+            }
+
+            $status     = $route->ia_status ?? 'pending';
+            $hasCache   = !empty($route->cache_json);
+
+            $this->show_cache_fisico($id);
+
+            $route      = Routes::select('id', 'name', 'ia_status', 'cache_json')->find($id);
+
+            return response()->success([
+                'route'     =>  $route,
+                'id'        =>  $route->id,
+                'status'    =>  $status,
+                'hasCache'  =>  $hasCache,
+                'completed' =>  $hasCache && $status === 'completed',
+            ], 'Estado actual de la IA consultado correctamente.');
+        } catch (\Throwable $e) {
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
     public function show(string $id)
     {
 
@@ -403,6 +438,14 @@ class RoutesController extends Controller
                 if (!empty($route->cache_json)) {
                     $iaData = json_decode($route->cache_json, true);
                 } else {
+                    if (empty($route->cache_json) && $route->ia_status !== 'processing') {
+                        $route->update(['ia_status' => 'processing']);
+                        GenerateRouteCacheJob::dispatch($route->id);
+                    }
+                    
+                    return response()->success(['route' => $route], 'Ruta encolada, IA procesando...');
+
+                    //GenerateRouteCacheJob::dispatch($route->id);
                     return $this->show_cache_fisico($id);
                     // 🔹 Caso contrario, generamos con Gemini (la lógica original con Cache::remember)
 
@@ -631,6 +674,7 @@ class RoutesController extends Controller
                                 }
                             }
                         }
+                        $route->update(['ia_status' => 'completed']);
                     } else {
                         $routePlan = "No se pudo generar la hoja de ruta. Error de la API: " . $response->body();
                     }

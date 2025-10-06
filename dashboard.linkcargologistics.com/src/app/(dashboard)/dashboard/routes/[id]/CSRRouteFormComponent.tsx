@@ -96,22 +96,16 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   };
 
   const requestIa = () => {
+
+    //return console.log(formData.backend+ location.pathname+"/status");
     setLoading(true);
     formData
-      .handleRequest(formData.backend + location.pathname)
+      .handleRequest(formData.backend+ location.pathname+"/status")
       .then((response: any) => {
-        
-        if (response && response.ia && response.ia.dataset) {
-          setRoutes(response.ia.dataset);
+        if(response&&response.route&&response.route.cache_json){
+          getInit()
         }else{
-          /*
-          if (count < 5) {
-            setCount(prev => prev + 1);
-            return getInit();
-          } else {
-            setLoading(false);
-          }   
-          */  
+          requestIa()
         }        
       })
       //.finally(() => setLoading(false));
@@ -119,13 +113,14 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
   useEffect(()=>{
     if(items.length>0 && routes.length===0){
+      requestIa()
       console.log(items.length)
       return;
     }
   },[items])
 
   if(loading){
-    return <div className="mt-5 grid h-full grid-cols-1 gap-5">Esperando por la IA...</div>
+    //return <div className="mt-5 grid h-full grid-cols-1 gap-5">Esperando por la IA...</div>
   }
 
   
@@ -151,7 +146,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                     Cargando rutas...
                   </div>
                 ) : (
-                  <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes} inputs={inputs}  items={items} setItems={setItems} />
+                  <CSRRouteImportComponent loading={loading} getInit={getInit} formData={formData}  routes={routes} inputs={inputs}  items={items} setItems={setItems} />
                 )}
                 <RouteFormActions />
               </Fragment>

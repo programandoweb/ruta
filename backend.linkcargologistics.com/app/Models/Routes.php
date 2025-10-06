@@ -20,7 +20,8 @@ class Routes extends Model
         'type',
         'date',
         'employees_id',
-        'cache_json'
+        'cache_json',
+        'ia_status'
     ];
 
     /**

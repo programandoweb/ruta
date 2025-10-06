@@ -22,6 +22,7 @@ interface Props {
   items: any[];
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
   inputs?:any;
+  loading?:any
 }
 
 const CSRRouteImportComponent: React.FC<Props> = ({
@@ -29,7 +30,8 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   setItems,
   routes: initialRoutes,
   formData,
-  inputs
+  inputs,
+  loading
 }) => {
   const [routes, setRoutes] = useState<RouteItem[]>(initialRoutes);
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
@@ -96,19 +98,28 @@ const CSRRouteImportComponent: React.FC<Props> = ({
         />
 
         {/* Columna de Ruta a Seguir */}
-        <RouteListColumn
-          routes={routes}
-          items={items}
-          openGoogleMaps={openGoogleMaps}
-          getBorderColor={getBorderColor}
-          onReorder={handleReorder} // 👈 callback
-        />
-
+        {
+          !loading&&routes.length>0&&(
+            <RouteListColumn
+              routes={routes}
+              items={items}
+              openGoogleMaps={openGoogleMaps}
+              getBorderColor={getBorderColor}
+              onReorder={handleReorder} // 👈 callback
+            />
+          )
+        }
+        
         {/* Mapa */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Mapa de la Ruta</h2>
-          <RouteMap routes={routes} />
-        </div>
+        {
+          !loading&&routes.length>0&&(
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Mapa de la Ruta</h2>
+              <RouteMap routes={routes} />
+            </div>
+          )
+        }        
+        
       </div>
     </div>
   );

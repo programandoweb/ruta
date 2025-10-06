@@ -23,6 +23,9 @@ Route::prefix('dashboard/routes')->group(function () {
     Route::get('/', [RoutesController::class, 'index']);
     Route::post('/new', [RoutesController::class, 'store']);
     Route::get('/{id}', [RoutesController::class, 'show']);
+
+    Route::get('/{id}/status', [RoutesController::class, 'iaStatus']); // ✅ nueva ruta
+
     Route::put('/{id}', [RoutesController::class, 'update']);
     Route::delete('/{id}', [RoutesController::class, 'destroy']);
 
