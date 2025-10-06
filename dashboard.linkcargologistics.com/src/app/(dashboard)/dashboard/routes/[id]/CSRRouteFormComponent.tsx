@@ -41,17 +41,26 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const [routes, setRoutes]   = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [drivers, setDrivers] = useState<any>([]);
+  const [count, setCount] = useState<number>(0);
 
   const getInit = () => {
     setLoading(true);
     formData
       .handleRequest(formData.backend + location.pathname)
       .then((response: any) => {
+
         if (response && response[prefixed]) {
           setInputs(response[prefixed]);
         }
         if (response && response.ia && response.ia.dataset) {
           setRoutes(response.ia.dataset);
+        }else{
+          if (count < 5) {
+            setCount(prev => prev + 1);
+            return getInit();
+          } else {
+            setLoading(false);
+          }     
         }
         if (response && response[prefixed] && response[prefixed].items) {
           setItems(response[prefixed].items);
@@ -60,7 +69,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
           setDrivers(response.drivers);
         }
       })
-      .finally(() => setLoading(false));
+      //.finally(() => setLoading(false));
   };
 
   useEffect(getInit, []);
@@ -82,6 +91,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
         }
       });
   };
+
+
 
   if(loading){
     return <div className="mt-5 grid h-full grid-cols-1 gap-5">Esperando por la IA...</div>

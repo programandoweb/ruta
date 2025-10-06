@@ -196,7 +196,7 @@ class RoutesController extends Controller
                 // ✅ CORRECCIÓN DE TIMEOUT
                 $response = Http::withHeaders([
                     'Content-Type' => 'application/json'
-                ])->timeout(150)->post($url, [
+                ])->timeout(350)->post($url, [
                     'contents' => [
                         [
                             'role' => 'user',
@@ -327,7 +327,7 @@ class RoutesController extends Controller
                     // ✅ CORRECCIÓN DE URL
                     $url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
                     // ✅ CORRECCIÓN DE TIMEOUT
-                    $response = Http::timeout(150)->post($url, [
+                    $response = Http::timeout(350)->post($url, [
                         'contents' => [['role' => 'user', 'parts' => [['text' => $prompt]]]]
                     ]);
 
@@ -398,7 +398,7 @@ class RoutesController extends Controller
 
             // Paso 2: Verificamos si hay items en la ruta.
             if ($route->items->isNotEmpty()) {
-
+                
                 // 🔹 Si ya existe cache_json en BD, lo usamos
                 if (!empty($route->cache_json)) {
                     $iaData = json_decode($route->cache_json, true);
@@ -426,7 +426,7 @@ class RoutesController extends Controller
 
                         $apiKey = env('GEMINI_API_KEY');
                         $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
-                        $response = Http::timeout(150)->post($url, [
+                        $response = Http::timeout(350)->post($url, [
                             'contents' => [[ 'role' => 'user', 'parts' => [['text' => $prompt]] ]]
                         ]);
 
@@ -603,7 +603,7 @@ class RoutesController extends Controller
                     
                     $apiKey = env('GEMINI_API_KEY');
                     $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
-                    $response = Http::timeout(150)->post($url, [
+                    $response = Http::timeout(350)->post($url, [
                         'contents' => [
                             [
                                 'role' => 'user',
@@ -870,7 +870,7 @@ class RoutesController extends Controller
                     $url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
 
                     // ✅ CORRECCIÓN DE TIMEOUT
-                    $response = Http::timeout(150)->post($url, [
+                    $response = Http::timeout(350)->post($url, [
                         'contents' => [
                             [
                                 'role' => 'user',
