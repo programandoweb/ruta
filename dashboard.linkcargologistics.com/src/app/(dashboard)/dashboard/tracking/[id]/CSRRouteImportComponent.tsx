@@ -81,8 +81,8 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
     //const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${route.lat},${route.lng}&travelmode=driving`;
     window.open(mapUrl, "_blank");
 
-    console.log(route)
-    return;
+    //console.log(route)
+    //return;
     // Números a notificar
     const recipients = [
       "573217002700@c.us",
