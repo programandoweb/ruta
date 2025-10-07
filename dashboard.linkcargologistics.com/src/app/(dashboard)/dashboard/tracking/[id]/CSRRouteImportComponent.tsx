@@ -94,7 +94,7 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
       if(whatsappPhone?.phone){
         const recipients = [        
         whatsappPhone?.phone+"@c.us",
-        "573217002700@c.us",
+        /*"573217002700@c.us",*/
         "573115000926@c.us",
         "5215526589002@c.us",
       ];
