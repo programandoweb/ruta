@@ -31,6 +31,7 @@ interface Item {
   type: 'pickup' | 'deliver';
   origin_address: string;
   origen_real:string;
+  phone?:any;
   // ...otras propiedades del item
 }
 
@@ -160,6 +161,7 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                             <div className="mt-2 text-xs text-gray-600 border-l-2 border-blue-200 pl-2 space-y-1">
                               <p><strong>Dirección IA:</strong> {route.address}</p>
                               <p><strong>Guía:</strong> {relatedItem.guide}</p>
+                              <p><strong>Teléfono:</strong> {relatedItem.phone}</p>
                               <p><strong>Status:</strong> <span className="font-semibold">{relatedItem.status}</span></p>
                               <p><strong>Acción:</strong> {relatedItem.type === 'pickup' ? "Recoger Caja" : "Dejar Caja"}</p>
                             </div>
