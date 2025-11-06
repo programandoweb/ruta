@@ -151,7 +151,7 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {routes.map((route) => {
                     // 3. Lógica principal refactorizada: Búsqueda por ID en el mapa O(1).
-                    const relatedItem = itemsById.get(route.id_direccion_item!);
+                    const relatedItem:any = itemsById.get(route.id_direccion_item!);
                     //console.log(route)
                     return (
                       <tr key={route.order} className="hover:bg-gray-50 transition-colors">
@@ -161,6 +161,7 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                             <div className="mt-2 text-xs text-gray-600 border-l-2 border-blue-200 pl-2 space-y-1">
                               <p><strong>Dirección IA:</strong> {route.address}</p>
                               <p><strong>Guía:</strong> {relatedItem.guide}</p>
+                              <p><strong>Nombre:</strong> {relatedItem.name||"No Disponible"}</p>
                               <p><strong>Teléfono:</strong> {relatedItem.phone}</p>
                               <p><strong>Status:</strong> <span className="font-semibold">{relatedItem.status}</span></p>
                               <p><strong>Acción:</strong> {relatedItem.type === 'pickup' ? "Recoger Caja" : "Dejar Caja"}</p>
