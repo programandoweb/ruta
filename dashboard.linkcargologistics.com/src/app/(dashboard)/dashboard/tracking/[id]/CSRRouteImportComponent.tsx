@@ -149,14 +149,14 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {routes.map((route) => {
+                  {routes.map((route,key:number) => {
                     // 3. Lógica principal refactorizada: Búsqueda por ID en el mapa O(1).
                     const relatedItem:any = itemsById.get(route.id_direccion_item!);
                     //console.log(route)
                     return (
                       <tr key={route.order} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 align-top">
-                          <p className="text-sm font-medium text-gray-900">Dirección Real: {route.origen_real} </p>
+                          <p className="text-sm font-medium text-gray-900"><span>{key+1}{")"}</span> Dirección Real: {route.origen_real} </p>
                           {relatedItem && (
                             <div className="mt-2 text-xs text-gray-600 border-l-2 border-blue-200 pl-2 space-y-1">
                               <p><strong>Dirección IA:</strong> {route.address}</p>
