@@ -13,9 +13,8 @@
 import { MdModeEdit } from "react-icons/md";
 import { IoMdTrash, IoMdSearch } from "react-icons/io";
 import { AiFillCheckCircle, AiFillCloseCircle, AiFillWarning } from "react-icons/ai";
-import { Fragment, useEffect, useState, type JSX } from "react";
+import {useEffect, useState, type JSX } from "react";
 import CardMenu from "@/components/card/CardMenu";
-import Card from "@/components/card";
 import Link from "next/link";
 import useFormDataNew from "@/hooks/useFormDataNew";
 import { setShowModal, setDialogTitle, setAcceptModal } from "@/store/Slices/dialogMessagesSlice";
@@ -205,6 +204,34 @@ const ColumnsCards = (props: Props) => {
   const [status, setStatus] = useState<any>({ salesStatuses: [], paymentStatuses: [] });
   const [modal, setModal] = useState<any>(false);
   const [load, setLoad] = useState<any>(false);
+  const [user, setUser] = useState<any>(null);
+
+  // 🔹 Cargar usuario del localStorage con await
+  const getUser = async () => {
+    try {
+      const storedUser = await Promise.resolve(localStorage.getItem("user"));
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        return parsedUser;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error cargando usuario:", error);
+      return null;
+    }
+  };
+
+  // Ejecutar al montar
+  useEffect(() => {
+    (async () => {
+      const usr = await getUser();
+      if (usr) {
+        console.log("Usuario cargado:", usr);
+      }
+    })();
+  }, []);
+
 
   init = () => {
     setLoad(true);
@@ -265,6 +292,8 @@ const ColumnsCards = (props: Props) => {
     setModal(row);
   };
 
+  
+
   return (
     <div >
       {(!skipHeader || viewSearchFilter) && (
@@ -314,11 +343,12 @@ const ColumnsCards = (props: Props) => {
                   <IoMdSearch className="w-6 h-6 text-blue-500 cursor-pointer" />
                 </Link>
               )}
-              {del && (
+              {((user && user.role && user.role==='admin') || del) && (
                 <span className="cursor-pointer" onClick={() => HandleModal(row)}>
                   <IoMdTrash className="w-6 h-6 text-red-500" />
                 </span>
               )}
+              
             </div>
           </div>
         ))}
