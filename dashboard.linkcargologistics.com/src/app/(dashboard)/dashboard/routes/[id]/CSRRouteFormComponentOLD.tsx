@@ -54,8 +54,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
         if (response && response[prefixed]) {
           setInputs(response[prefixed]);
         }
-        if (response && response.dataset) {
-          setRoutes(response.dataset);
+        if (response && response.ia && response.ia.dataset) {
+          setRoutes(response.ia.dataset);
         }else{
           /*
           if (count < 5) {

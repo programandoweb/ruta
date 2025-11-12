@@ -22,32 +22,40 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('route_items', function (Blueprint $table) {
-            $table->increments('id');
+        $table->increments('id');
 
-            // Relación con la ruta maestra
-            $table->integer('route_id')->unsigned();
-            $table->foreign('route_id')->on('routes')->references('id')->onDelete('cascade');
+        // Relación con la ruta maestra
+        $table->integer('route_id')->unsigned();
+        $table->foreign('route_id')->on('routes')->references('id')->onDelete('cascade');
 
-            // Número de Guía 
-            $table->string('guide');
+        // Número de Guía
+        $table->string('guide');
 
-            // Datos de cada parada
-            $table->string('name')->nullable(); // Nombre opcional
-            $table->string('phone'); // Celular
-            $table->string('origin_address'); // Dirección origen
-            $table->string('destination_address')->nullable(); // Dirección destino
-            $table->enum('type', ['deliver', 'pickup']); // Dejar caja o recoger caja
-            // Estado en español
-            $table->enum('status', [
-                'Borrador',
-                'Agendado',
-                'En proceso',
-                'Rechazado',
-                'Cancelado',
-            ])->default('Borrador');
+        // Datos de cada parada
+        $table->string('name')->nullable();
+        $table->string('phone');
+        $table->string('origin_address');
+        $table->string('destination_address')->nullable();
+        $table->enum('type', ['deliver', 'pickup']);
 
-            $table->timestamps();
-        });
+        $table->enum('status', [
+            'Borrador',
+            'Agendado',
+            'En proceso',
+            'Rechazado',
+            'Cancelado',
+        ])->default('Borrador');
+
+        // ✅ Coordenadas para enrutamiento
+        $table->decimal('lat', 10, 7)->nullable();
+        $table->decimal('lng', 10, 7)->nullable();
+
+        // ✅ (Opcional) fecha de caché de geolocalización
+        $table->timestamp('geo_cached_at')->nullable();
+
+        $table->timestamps();
+    });
+
     }
 
     /**

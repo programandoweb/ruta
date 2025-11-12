@@ -23,20 +23,27 @@ class RouteItem extends Model
 
     protected $fillable = [
         'route_id',
+        'guide',
         'name',
         'phone',
         'origin_address',
         'destination_address',
         'type',
         'status',
-        'guide'
+        'lat',
+        'lng',
+        'geo_cached_at',
     ];
 
-    /**
-     * Relación con la ruta maestra.
-     */
+    protected $casts = [
+        'lat'           => 'float',
+        'lng'           => 'float',
+        'geo_cached_at' => 'datetime',
+    ];
+
     public function route()
     {
-        return $this->belongsTo(Route::class, 'route_id');
+        // El modelo de la ruta es `App\Models\Routes`
+        return $this->belongsTo(Routes::class, 'route_id');
     }
 }
