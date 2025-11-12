@@ -691,7 +691,133 @@ class RoutesController extends Controller
      * GET /routes/{id}/ia-dataset
      * Devuelve SOLO el dataset ordenado por IA (sin hoja de ruta ni metadatos).
      */
+
     public function getItemsAll($route)
+    {
+        $origin      = (string) $route->origin_address;
+        $destination = (string) $route->destination_address;
+
+        $stops = [];
+        foreach ($route->items as $it) {
+            if (!empty($it->origin_address)) {
+                $stops[] = $it->origin_address;
+            }
+        }
+        
+        if (empty($stops)) {
+            return response()->success(['route' => $route], 'Sin paradas.');
+        }
+
+        $addressList = "- " . implode("\n- ", array_map('trim', $stops));
+
+        $prompt = <<<EOT
+    Actúa como experto en optimización de rutas.
+    Ordena cronológicamente las PARADAS intermedias para un recorrido que inicia en:
+    ORIGEN: {$origin}
+    y finaliza en:
+    DESTINO: {$destination}
+
+    Reglas:
+    - Usa únicamente las paradas listadas.
+    - No incluyas ORIGEN ni DESTINO en el resultado.
+    - No alteres el texto de las direcciones.
+    - Devuelve EXCLUSIVAMENTE un JSON válido (sin texto adicional), con forma:
+    [
+    { "order": 1, "address": "..." },
+    { "order": 2, "address": "..." }
+    ]
+
+    PARADAS (desordenadas):
+    {$addressList}
+    EOT;
+
+        $apiKey = env('GEMINI_API_KEY');
+        $url    = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+
+        $dataset = [];
+        try {
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->timeout(300)
+                ->post($url, [
+                    'contents' => [[
+                        'role'  => 'user',
+                        'parts' => [['text' => $prompt]],
+                    ]],
+                ]);
+
+            if ($response->successful()) {
+                $raw = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+                $clean = trim($raw);
+
+                if ($clean !== '' && ($clean[0] ?? '') === '[') {
+                    $dataset = json_decode($clean, true) ?? [];
+                }
+
+                if (empty($dataset) && preg_match('/\[\s*{[\s\S]*}\s*\]/', $raw, $m)) {
+                    $dataset = json_decode($m[0], true) ?? [];
+                }
+            }
+        } catch (\Throwable $e) {
+            // noop
+        }
+
+        if (empty($dataset)) {
+            $i = 1;
+            foreach ($stops as $addr) {
+                $dataset[] = ['order' => $i++, 'address' => $addr];
+            }
+        }
+
+        // ---------- Enriquecimiento sin alterar la lógica anterior ----------
+        // Índices por dirección para mapear metadatos originales del item
+        $items = $route->items ?? collect();
+        $itemsByAddr = $items->keyBy('origin_address');
+
+        $normalize = static function (string $s): string {
+            $s = mb_strtolower(trim($s));
+            $s = preg_replace('/[^\p{L}\p{N}\s#,.:-]/u', '', $s);
+            $s = preg_replace('/\s+usa?$/', '', $s);
+            $s = preg_replace('/\s+california$/', '', $s);
+            return preg_replace('/\s+/', ' ', $s);
+        };
+
+        $itemsByAddrNorm = [];
+        foreach ($items as $it) {
+            $k = $normalize((string)$it->origin_address);
+            if ($k !== '') $itemsByAddrNorm[$k] = $it;
+        }
+
+        foreach ($dataset as &$row) {
+            $addr = (string)($row['address'] ?? '');
+            $item = $itemsByAddr->get($addr);
+
+            if (!$item && $addr !== '') {
+                $norm = $normalize($addr);
+                if (isset($itemsByAddrNorm[$norm])) {
+                    $item = $itemsByAddrNorm[$norm];
+                }
+            }
+
+            // Incluir campos solicitados (preservando lat/lng/order/address existentes)
+            $row['guide']               = $item->guide               ?? ($row['guide']               ?? null);
+            $row['name']                = $item->name                ?? ($row['name']                ?? null);
+            $row['phone']               = isset($item->phone) ? (string)$item->phone : ((string)($row['phone'] ?? ''));
+            $row['origin_address']      = $item->origin_address      ?? ($row['origin_address']      ?? $addr);
+            $row['destination_address'] = $item->destination_address ?? ($row['destination_address'] ?? '');
+            $row['type']                = $item->type                ?? ($row['type']                ?? 'deliver');
+        }
+        unset($row);
+        // -------------------------------------------------------------------
+
+        // Persistir opcionalmente
+        $route->cache_json = json_encode(['dataset' => $dataset], JSON_UNESCAPED_UNICODE);
+        $route->ia_status  = 'order1';
+        $route->save();
+
+        return response()->success(['dataset' => $dataset], 'OK');
+    }
+
+    public function getItemsAllX2($route)
     {
         $origin      = (string) $route->origin_address;
         $destination = (string) $route->destination_address;

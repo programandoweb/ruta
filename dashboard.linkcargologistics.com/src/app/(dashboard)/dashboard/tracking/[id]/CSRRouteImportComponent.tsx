@@ -47,7 +47,7 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
   // 2. Optimización: Se crea un mapa para buscar items por ID de forma instantánea.
   //    useMemo evita que este mapa se recalcule en cada render, solo si 'items' cambia.
   const itemsById = useMemo(() => 
-    new Map(items.map(item => [item.id, item])),
+    new Map(items.map(item => [item.phone, item])),
     [items]
   );
 
@@ -135,6 +135,9 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
   };
 
 
+  
+
+
   return (
     <div className="">
       <Card className="shadow-lg border border-gray-100 mt-6">
@@ -149,9 +152,10 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {routes.map((route,key:number) => {
+                  {routes.map((route:any,key:number) => {
+
                     // 3. Lógica principal refactorizada: Búsqueda por ID en el mapa O(1).
-                    const relatedItem:any = itemsById.get(route.id_direccion_item!);
+                    const relatedItem:any = itemsById.get(route.phone!);
                     //console.log(route)
                     return (
                       <tr key={route.order} className="hover:bg-gray-50 transition-colors">
