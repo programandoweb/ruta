@@ -18,6 +18,7 @@ use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
+use App\Models\MasterTable;
 
 class UsersController extends Controller
 {
@@ -154,4 +155,17 @@ class UsersController extends Controller
             return response()->error($e->getMessage(), 500);
         }
     }
+
+    public function getTokens()
+    {
+        try {
+            $tokens =   MasterTable::where("grupo","api")->where("bool_status",1)->get();
+
+            return response()->success(compact("tokens"), 'Tokens listados');
+        } catch (\Exception $e) {
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
 }

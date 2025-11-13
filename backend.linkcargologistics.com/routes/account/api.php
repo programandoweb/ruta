@@ -28,3 +28,6 @@ Route::post('dashboard/companies/new', [BusinessController::class,"store"]);
 
 Route::resource('dashboard/users', UsersController::class);
 Route::post('dashboard/users/new', [UsersController::class,"store"]);
+
+
+Route::get('dashboard/get-token', [UsersController::class,"getTokens"]);

@@ -51,6 +51,13 @@ const routes = [
     icon: <MdLocalShipping className="h-6 w-6" />,    
   },
   {
+    name: "Pendientes",
+    layout: "/dashboard",
+    path: "/dashboard/guides",
+    permission: "manage_tracking",
+    icon: <MdLocalShipping className="h-6 w-6" />,    
+  },
+  {
     name: "Usuarios",
     layout: "/dashboard",
     path: "/dashboard/users",
