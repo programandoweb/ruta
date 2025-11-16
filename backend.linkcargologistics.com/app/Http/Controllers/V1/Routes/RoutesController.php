@@ -1118,10 +1118,18 @@ class RoutesController extends Controller
             $route->save();
         }
 
+        $extra = [];
+        if (auth()->user()->hasRole('admin')) {
+            $drivers = \App\Models\User::whereHas('roles', function ($q) {
+                $q->where('name', 'employees');
+            })->get();            
+        }
+
         return response()->success(array_merge([
-                'route'     => $route,
-                'ia'        => $dataset, // $iaData ahora contiene el dataset con 'id_direccion_item'
-                'dataset'   => $dataset
+                'route'     =>  $route,
+                'ia'        =>  $dataset, // $iaData ahora contiene el dataset con 'id_direccion_item'
+                'dataset'   =>  $dataset,
+                'drivers'   =>  $drivers
                 
             ], []), 'Hoja de ruta obtenida correctamente 2026. 20255555');
 

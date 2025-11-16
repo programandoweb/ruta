@@ -41,7 +41,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const [routes, setRoutes]   = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [drivers, setDrivers] = useState<any>([]);
-  const [count, setCount] = useState<number>(0);
+  
 
   const getInit = () => {
     if (location.pathname.endsWith("/new")) return;
