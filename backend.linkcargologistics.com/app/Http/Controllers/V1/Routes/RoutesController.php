@@ -1057,6 +1057,7 @@ class RoutesController extends Controller
                 });
             };
 
+            //p($dataset);
             // 5) Procesar filas
             foreach ($dataset as $i => $row) {
                 $itemId  = $row['id_direccion_item'] ?? null;
@@ -1118,7 +1119,8 @@ class RoutesController extends Controller
             $route->save();
         }
 
-        $extra = [];
+        $extra      =   [];
+        $drivers    =   [];
         if (auth()->user()->hasRole('admin')) {
             $drivers = \App\Models\User::whereHas('roles', function ($q) {
                 $q->where('name', 'employees');
