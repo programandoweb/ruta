@@ -1582,12 +1582,23 @@ class RoutesController extends Controller
             ]);
 
             $route = Routes::findOrFail($id);
+
+            $items_old  =   [];
+
+            foreach ($route->items as $key => $value) {
+                $items_old[$value->origin_address]=$value;                
+            }
+            
+
             $route->update($validated);
 
             if (isset($validated['items'])) {
                 $route->items()->delete();
+
                 foreach ($validated['items'] as $item) {
-                    $route->items()->create($item);
+                    if(!empty($items_old[$item["origin_address"]])){
+                        $route->items()->create($items_old[$item["origin_address"]]->toArray());
+                    }
                 }
             }
 
@@ -1684,6 +1695,8 @@ class RoutesController extends Controller
      */
     public function reorder(Request $request, $id)
     {
+
+        //p(50);
         $route = Routes::findOrFail($id);
 
         $validated = $request->validate([
@@ -1692,8 +1705,18 @@ class RoutesController extends Controller
             'routes.*.address' => 'required|string',
             'routes.*.lat' => 'required|numeric',
             'routes.*.lng' => 'required|numeric',
+
+            // Campos opcionales pero existentes en el payload
+            'routes.*.guide' => 'nullable|string',
+            'routes.*.name'  => 'nullable|string',
+            'routes.*.phone' => 'nullable|string',
+            'routes.*.origin_address' => 'nullable|string',
+            'routes.*.destination_address' => 'nullable|string',
+            'routes.*.type' => 'nullable|string|in:deliver,pickup',
+
             'routes.*.id_direccion_item' => 'nullable|integer',
         ]);
+
 
         $cache = $route->cache_json ? json_decode($route->cache_json, true) : [];
         if (!is_array($cache)) {
