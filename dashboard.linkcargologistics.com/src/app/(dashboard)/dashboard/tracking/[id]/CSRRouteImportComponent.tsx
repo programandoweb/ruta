@@ -12,7 +12,8 @@
 
 import { Fragment, useMemo, useState } from "react";
 import Card from "@/components/card";
-import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt } from "react-icons/fa";
+import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt, FaFilePdf } from "react-icons/fa";
+
 
 // 1. Interfaz actualizada para la prop 'routes'
 interface RouteItem {
@@ -65,6 +66,14 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
       console.error(`❌ Error enviando a ${recipient}:`, error);
     }
   };
+
+  const openPDF = async (route: RouteItem) => {
+    const mapUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}`;
+    console.log(mapUrl,route)
+    return;
+    window.open(mapUrl, "_blank");
+  }
+
 
   const openGoogleMapsAndNotify = async (route: RouteItem) => {
     // 1. Validar que el objeto route y la dirección existan.
@@ -174,6 +183,15 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                         </td>
                         <td className="px-4 py-3 text-center align-middle">
                           <div className="flex justify-center items-center space-x-4">
+                            <button
+                              type="button"
+                              title="Imprimir PDF"
+                              onClick={() => openPDF(route)}
+                              className="text-red-600 hover:text-blue-800 transition-colors"
+                            >
+                              <FaFilePdf size={20} />
+                            </button>
+
                             <button
                               type="button"
                               title="Abrir Mapa y Notificar"

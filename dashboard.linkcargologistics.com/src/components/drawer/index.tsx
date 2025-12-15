@@ -24,12 +24,13 @@ interface RootState {
 
 interface DrawerComponentProps {
   children?: ReactNode;
+  width?:any;
 }
 
-const DrawerComponent: React.FC<DrawerComponentProps> = ({ children }) => {
+const DrawerComponent: React.FC<DrawerComponentProps> = ({ children , width=null }) => {
   const dispatch = useDispatch();
   const { openDrawer } = useSelector((state: RootState) => state.dialog);
-  const [drawerWidth, setDrawerWidth] = useState('40vw');
+  const [drawerWidth, setDrawerWidth] = useState(width??'40vw');
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -46,7 +47,7 @@ const DrawerComponent: React.FC<DrawerComponentProps> = ({ children }) => {
         setDrawerWidth('70vw');
         setIsMobile(false);
       } else {
-        setDrawerWidth('40vw');
+        setDrawerWidth(width??'40vw');
         setIsMobile(false);
       }
     };
@@ -66,7 +67,8 @@ const DrawerComponent: React.FC<DrawerComponentProps> = ({ children }) => {
   };
 
   if (!mounted) return null;
-
+  if(!openDrawer?.open)return null
+  //console.log(drawerWidth)
   return (
     <Drawer
       open={openDrawer?.open || false}
