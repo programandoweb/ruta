@@ -10,9 +10,23 @@
  * ---------------------------------------------------
  */
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Card from "@/components/card";
 import { FaThumbsUp, FaThumbsDown, FaMapMarkedAlt, FaFilePdf } from "react-icons/fa";
+import BasicBtnUpload from "@/components/buttom/BasicBtnUpload";
+
+
+interface UploadBtnProps {
+  send_to_endpoint?: any;
+  preview?: boolean;
+  className?: string;
+  size?: 'small' | 'medium' | 'large';
+  label: string;
+  name: string;
+  defaultValue?: string;
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  format?: string;
+}
 
 
 // 1. Interfaz actualizada para la prop 'routes'
@@ -37,6 +51,7 @@ interface Item {
 }
 
 interface Props {
+  inputs?: any;
   routes: RouteItem[];
   formData?: any;
   getInit?: any;
@@ -44,13 +59,16 @@ interface Props {
   setItems: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
-const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, formData }) => {
+const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, formData, inputs:data }) => {
   // 2. Optimización: Se crea un mapa para buscar items por ID de forma instantánea.
   //    useMemo evita que este mapa se recalcule en cada render, solo si 'items' cambia.
   const itemsById = useMemo(() => 
     new Map(items.map(item => [item.phone, item])),
     [items]
   );
+
+  const [inputs, setInputs]   = useState<any>(null)
+  const [gallery, setGallery] = useState<any>([])
 
   // Función auxiliar para enviar mensajes de WhatsApp y evitar código repetido
   const sendWhatsAppMessage = async (recipient: string, message: string) => {
@@ -144,9 +162,14 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
   };
 
 
+  const handleGalleryUpload = (url: string) => {
+    setGallery((prev: any) => {
+      const arr = Array.isArray(prev.gallery) ? prev.gallery : [];
+      return { ...prev, gallery: JSON.stringify([...arr, url]) };
+    });
+  };
+
   
-
-
   return (
     <div className="">
       <Card className="shadow-lg border border-gray-100 mt-6">
@@ -165,7 +188,7 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
 
                     // 3. Lógica principal refactorizada: Búsqueda por ID en el mapa O(1).
                     const relatedItem:any = itemsById.get(route.phone!);
-                    //console.log(route)
+                    const gallery         = relatedItem?.evidence_urls||[]
                     return (
                       <tr key={route.order} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 align-top">
@@ -226,6 +249,15 @@ const CSRRouteTableComponent: React.FC<Props> = ({ items, setItems, routes, form
                                 {relatedItem?.status}
                                </span>
                             )}
+                          </div>
+                          <div>
+                            <BasicBtnUpload
+                              gallery={gallery}
+                              name={"evidence_"+route?.lat+route?.lng}
+                              keys={JSON.stringify({order:data?.id,lat:route?.lat,lng:route?.lng})}
+                              label="Subir imagen"
+                              setFormData={setInputs}
+                            />
                           </div>
                         </td>
                       </tr>

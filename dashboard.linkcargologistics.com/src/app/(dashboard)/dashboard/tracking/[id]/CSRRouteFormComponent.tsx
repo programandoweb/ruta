@@ -51,7 +51,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
           setInputs(response[prefixed]);
         }
         if (response && response.dataset) {
-          console.log(response.dataset)
+          //console.log(response.dataset)
           setRoutes(response.dataset);
         }
         if (response && response[prefixed] && response[prefixed].items) {
@@ -73,7 +73,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
       
         <RouteFormHeader />
        
-        <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes}  items={items} setItems={setItems} />            
+        <CSRRouteImportComponent getInit={getInit} formData={formData}  routes={routes}  items={items} setItems={setItems} inputs={inputs} />            
       
     </div>
   );

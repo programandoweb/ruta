@@ -31,6 +31,8 @@ return new class extends Migration
         // Número de Guía
         $table->string('guide');
 
+        $table->longtext('evidence_urls')->nullable();
+
         // Datos de cada parada
         $table->string('name')->nullable();
         $table->string('phone');

@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Imagick\Driver;
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
+
 
 class MultimediaController extends Controller
 {
@@ -111,7 +113,7 @@ class MultimediaController extends Controller
             $multimedia     =   $this->createMultimedia($dataset,$user);            
         }
 
-        return response()->success(["doc" => $multimedia , "action" => true], 'Imagen guardada con éxito');
+        return response()->success(["doc" => $multimedia , "action" => true], 'Imagen guardada con éxito UPLOAD Open');
         
     }
     
@@ -296,23 +298,78 @@ class MultimediaController extends Controller
 
             $doc_return =   Multimedia::where("path","like","%".$archivo["nombreArchivo"]."%")->first();
 
-            $this->save_in_other_table($request,$doc_return);
+            //$this->save_in_other_table($request,$doc_return);
 
-            if($request->has("save")){
-                $save   =   json_decode($request->save);
-                DB::table('users')->where('id', $save->id)
-                                  ->update([
-                                        $save->column => $doc_return->{$save->src}
-                                  ]);
-                //p($save);
-            }
-            
-            return response()->success(["doc" => $doc_return , "action" => true], 'Imagen guardada con éxito');
+            $this->saveEvidenceInTable($request, $doc_return);
+
+            return response()->success(["doc" => $doc_return , "action" => true, "store"=>true], 'Imagen guardada con éxito');
 
         } catch (\Exception $e) {
             return response()->error($e->getMessage(), $e->getCode());
         }
     }
+
+
+
+    private function saveEvidenceInTable(Request $request, $doc_return): void
+    {
+        
+        if (!$request->filled(['save_as', 'key', 'content'])) {
+            return;
+        }
+
+        $table  = $request->save_as;     // route_items
+        $id     = $request->key;      // id del registro
+        $column = $request->content;  // evidence_urls
+
+        //p([$table, $id, $column]);
+
+        // Seguridad mínima: evitar SQL injection por nombre de tabla/columna
+        if (!Schema::hasTable($table) || !Schema::hasColumn($table, $column)) {
+            throw new \Exception('Tabla o columna no válida.');
+        }
+
+        // Obtener registro actual
+        if(!is_string($id)){
+            throw new \Exception('Datos de entrada no válida.');            
+        }
+        
+        $json       =   json_decode($id, true);
+
+        $record     =   DB::table($table)
+                            ->where('lat', $json["lat"])
+                            ->where('lng', $json["lng"])
+                            ->where('route_id', $json["order"])
+                            ->first();
+        
+        if (!$record) {
+            throw new \Exception('Registro no encontrado.');
+        }
+
+        // Obtener valor actual (JSON)
+        $current = $record->{$column};
+
+        // Convertir a array
+        $array = [];
+
+        if (!empty($current)) {
+            $decoded = json_decode($current, true);
+            if (is_array($decoded)) {
+                $array = $decoded;
+            }
+        }
+
+        // Push del nuevo archivo
+        $array[] = $doc_return->path; // o slug según tu estructura
+        //p($array);
+        // Guardar nuevamente
+        DB::table($table)
+            ->where('id', $record->id)
+            ->update([
+                $column => json_encode($array),
+            ]);
+    }
+
 
     private function save_in_other_table($request, $doc_return)
     {

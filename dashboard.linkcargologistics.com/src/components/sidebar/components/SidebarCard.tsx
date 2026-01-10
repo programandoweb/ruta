@@ -29,7 +29,7 @@ const FreeCard = () => {
       <div className="mt-16 flex h-fit flex-col items-center">
         <p className="text-lg font-bold text-white">Design & Dev</p>
         <p className="mt-1 px-4 text-center text-sm text-white">
-          By Programandoweb
+          By Ivoolve Soft
         </p>
 
         <a

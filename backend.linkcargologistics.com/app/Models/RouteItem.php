@@ -24,6 +24,7 @@ class RouteItem extends Model
     protected $fillable = [
         'route_id',
         'guide',
+        'evidence_urls',          // ✅ agregado
         'name',
         'phone',
         'origin_address',
@@ -36,6 +37,7 @@ class RouteItem extends Model
     ];
 
     protected $casts = [
+        'evidence_urls' => 'array',   // ✅ casteo correcto para JSON/array
         'lat'           => 'float',
         'lng'           => 'float',
         'geo_cached_at' => 'datetime',
@@ -43,7 +45,6 @@ class RouteItem extends Model
 
     public function route()
     {
-        // El modelo de la ruta es `App\Models\Routes`
         return $this->belongsTo(Routes::class, 'route_id');
     }
 }
