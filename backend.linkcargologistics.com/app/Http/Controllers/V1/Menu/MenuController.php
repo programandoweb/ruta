@@ -17,6 +17,9 @@ use App\Repositories\ProductsRepository;
 use App\Models\MasterTable;
 use App\Models\CashShift;
 use App\Services\Cash\CashServiceInterface;
+use App\Models\RouteItem;
+use App\Models\Routes;
+
 
 class MenuController extends Controller
 {
@@ -100,4 +103,48 @@ class MenuController extends Controller
             return response()->error($e->getMessage(), 500);
         }
     }
+
+
+
+
+    public function routeByGuide(Request $request)
+    {
+        try {
+
+            $validated = $request->validate([
+                'guide' => 'required|string|max:255',
+            ]);
+
+            // 🔎 Buscar item por guía remota
+            $routeItem = RouteItem::where('guide_remote', $validated['guide'])
+                ->with('route') // relación con routes
+                ->first();
+
+            if (!$routeItem) {
+                return response()->error(
+                    'No se encontró ninguna ruta asociada a esta guía.',
+                    404
+                );
+            }
+
+            // 🔁 Traer ruta completa con sus items
+            $route = Routes::with('items')
+                ->find($routeItem->route_id);
+
+            return response()->success(
+                [
+                    'route'      => $route,
+                    'route_item' => $routeItem,
+                ],
+                'Ruta encontrada por número de guía.'
+            );
+
+        } catch (\Throwable $e) {
+            return response()->error(
+                $e->getMessage(),
+                $e->getCode() ?: 422
+            );
+        }
+    }
+
 }

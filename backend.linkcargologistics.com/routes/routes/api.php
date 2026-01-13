@@ -20,6 +20,9 @@ Route::get('/dashboard/reports/inventory-status', [RoutesController::class, 'inv
 
 // 🔹 CRUD de rutas
 Route::prefix('dashboard/routes')->group(function () {
+
+    Route::put('{route_id}/setGuideRemote', [RouteItemsController::class, 'setGuideRemote']);
+
     Route::get('/', [RoutesController::class, 'index']);
     Route::post('/new', [RoutesController::class, 'store']);
     Route::get('/{id}', [RoutesController::class, 'show']);
@@ -47,7 +50,8 @@ Route::prefix('dashboard/tracking')->group(function () {
 });
 
 
-Route::prefix('routes')->group(function () {
+Route::prefix('routes')->group(function () {    
+
     // 🔹 Importar items de ruta vía Excel
     Route::post('/import-excel', [RouteItemsController::class, 'importExcel']);
     // 🔹 CRUD de items dentro de una ruta

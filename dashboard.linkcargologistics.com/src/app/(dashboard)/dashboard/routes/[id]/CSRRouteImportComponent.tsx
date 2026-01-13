@@ -101,6 +101,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
         {
           !loading&&routes.length>0&&(
             <RouteListColumn
+              id={formData.id}
               routes={routes}
               items={items}
               openGoogleMaps={openGoogleMaps}

@@ -34,6 +34,7 @@ class RouteItem extends Model
         'lat',
         'lng',
         'geo_cached_at',
+        'guide_remote'
     ];
 
     protected $casts = [

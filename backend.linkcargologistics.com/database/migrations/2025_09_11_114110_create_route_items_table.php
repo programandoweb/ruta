@@ -33,6 +33,8 @@ return new class extends Migration
 
         $table->longtext('evidence_urls')->nullable();
 
+        $table->string('guide_remote')->nullable();
+
         // Datos de cada parada
         $table->string('name')->nullable();
         $table->string('phone');

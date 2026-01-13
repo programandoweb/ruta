@@ -20,8 +20,6 @@ const prefixed = "route";
 
 const RouteFormFields: React.FC<Props> = ({ inputs, setInputs, drivers }) => {
 
-  console.log(drivers)
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 

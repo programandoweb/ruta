@@ -50,7 +50,6 @@ const CSRRouteFormComponent: React.FC<any> = () => {
     formData
       .handleRequest(formData.backend + location.pathname)
       .then((response: any) => {
-        console.log(response)
         if (response && response[prefixed]) {
           setInputs(response[prefixed]);
         }
@@ -115,7 +114,6 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   useEffect(()=>{
     if(items.length>0 && routes.length===0){
       requestIa()
-      console.log(items.length)
       return;
     }
   },[items])

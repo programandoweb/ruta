@@ -13,6 +13,9 @@ Route::post('/coupons/search', [CouponsController::class, 'coupons_search']);
 Route::get('/open/getInit', [MenuController::class, 'getInit']);
 
 
+Route::get('/open/route/byGuide', [MenuController::class, 'routeByGuide']);
+
+
 Route::middleware('auth:api')->group(function () {
     Route::get('/dashboard/coupons/{id}', [CouponsController::class, 'show']);
     Route::post('/dashboard/coupons/new', [CouponsController::class, 'store']);

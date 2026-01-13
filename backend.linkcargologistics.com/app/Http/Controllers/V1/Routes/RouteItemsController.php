@@ -221,4 +221,50 @@ class RouteItemsController extends Controller
     }
 
 
+    /**
+     * PUT /routes/{route_id}/setGuideRemote
+     */
+    public function setGuideRemote(Request $request, $route_id)
+    {
+        try {
+
+            $validated = $request->validate([
+                '*.value' => 'required|string|max:255',
+                '*.lat'   => 'required|numeric',
+                '*.lng'   => 'required|numeric',
+            ]);
+
+            // 👇 aquí iremos paso a paso después
+            // $validated contiene el payload validado
+            // $route_id disponible
+
+            foreach ($request->all() as $key => $value) {
+                $item   =   RouteItem::where('route_id', $route_id)
+                                    ->where('lat', $value["lat"])
+                                    ->where('lng', $value["lng"])
+                                    ->first();
+                $item->guide_remote =  $value["value"];
+                $item->save();                
+            }
+
+           
+
+            return response()->success(
+                [
+                    'route_id' => $route_id,
+                    'data'     => $validated,
+                ],
+                'Payload recibido y validado correctamente.'
+            );
+
+        } catch (\Throwable $e) {
+            return response()->error(
+                $e->getMessage(),
+                $e->getCode() ?: 422
+            );
+        }
+    }
+
+
+
 }
