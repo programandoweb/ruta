@@ -10,7 +10,7 @@
  * ---------------------------------------------------
  */
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Card from "@/components/card";
 import {
   FaThumbsUp,
@@ -19,6 +19,14 @@ import {
   FaFilePdf,
 } from "react-icons/fa";
 import BasicBtnUpload from "@/components/buttom/BasicBtnUpload";
+import Link from "next/link";
+
+const ENDPOINT = {
+  MOV: "https://app.movexlogistica.com/api/v1/packages/pdf/guide?guideNumber=",
+  LAT: "https://backend.latinoexpress-cargo.com/api/v1/packages/pdf/guide?guideNumber=",
+} as const;
+
+type ServiceKey = keyof typeof ENDPOINT;
 
 const CSRRouteTableComponent = ({
   items,
@@ -26,7 +34,7 @@ const CSRRouteTableComponent = ({
   routes,
   formData,
   inputs: data,
-  getInit
+  getInit,
 }: any) => {
   const itemsById = useMemo(
     () => new Map(items.map((item: any) => [item.phone, item])),
@@ -57,19 +65,20 @@ const CSRRouteTableComponent = ({
       )
       .then((res: any) => {
         if (res.items) setItems(res.items);
-        if(getInit)getInit()
+        if (getInit) getInit();
       });
   };
 
-  const handleReject = (address: string, itemId: number) => {
+  const handleReject = (address: string, itemId: number, row: any) => {
     formData
       .handleRequest(
-        `${formData.backend}/dashboard/routes/2/set-status-address-by-items`,
+        `${formData.backend}/dashboard/routes/${itemId}/set-status-address-by-items`,
         "post",
-        { direction: address, status: "reject", route_items: itemId }
+        { direction: address, status: "reject", route_items: itemId , row }
       )
       .then((res: any) => {
         if (res.items) setItems(res.items);
+        if (getInit) getInit();
       });
   };
 
@@ -112,7 +121,6 @@ const CSRRouteTableComponent = ({
                     </div>
                   </td>
 
-                  {/* DIRECCIÓN */}
                   <td className="px-5 py-4 align-top">
                     {relatedItem && (
                       <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 space-y-1">
@@ -136,74 +144,100 @@ const CSRRouteTableComponent = ({
                     )}
                   </td>
 
-                  {/* CAJAS */}
                   <td className="px-5 py-4 align-top space-y-3">
-                    {route?.json_box_and_guide?.map((row: any, k: number) => (
-                      <div
-                        key={k}
-                        className="flex flex-wrap items-center justify-between gap-3 border rounded-lg p-3 bg-gray-50"
-                      >
-                        <div className="text-xs font-semibold text-gray-700">
-                          {row.guide}
-                          <span className="text-gray-400 mx-1">|</span>
-                          {row.box}
-                          <span className="ml-2 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
-                            {row.status}
-                          </span>
-                        </div>
+                    {route?.json_box_and_guide?.map((row: any, k: number) => {
+                      const service = row?.service as ServiceKey | undefined;
 
-                        <div className="flex items-center gap-3">
-                          <BasicBtnUpload
-                            name={"evidence_" + row.guide + row.box}
-                            keys={JSON.stringify({
-                              order: data?.id,
-                              lat: route?.lat,
-                              lng: route?.lng,
-                            })}
-                            gallery={row?.evidences}
-                            label="Subir evidencia"
-                            setFormData={setInputs}
-                          />
-
-                          {row.status === "Borrador" ? (
-                            <>
-                              <button
-                                title="PDF"
-                                onClick={() => openPDF(route)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <FaFilePdf size={18} />
-                              </button>
-                              <button
-                                title="Aceptar"
-                                onClick={() =>
-                                  handleAccept(route.address, relatedItem.id, row)
-                                }
-                                className="text-green-600 hover:text-green-800"
-                              >
-                                <FaThumbsUp size={18} />
-                              </button>
-                              <button
-                                title="Rechazar"
-                                onClick={() =>
-                                  handleReject(route.address, relatedItem.id)
-                                }
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <FaThumbsDown size={18} />
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-xs font-bold uppercase text-gray-500">
+                      return (
+                        <div
+                          key={k}
+                          className="flex flex-wrap items-center justify-between gap-3 border rounded-lg p-3 bg-gray-50"
+                        >
+                          <div className="text-xs font-semibold text-gray-700">
+                            {row.guide}
+                            <span className="text-gray-400 mx-1">|</span>
+                            {row.box}
+                            <span className="ml-2 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
                               {row.status}
                             </span>
-                          )}
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <BasicBtnUpload
+                              name={"evidence_" + row.guide + row.box}
+                              keys={JSON.stringify({
+                                order: data?.id,
+                                lat: route?.lat,
+                                lng: route?.lng,
+                              })}
+                              gallery={row?.evidences}
+                              label="Subir evidencia"
+                              setFormData={setInputs}
+                            />
+
+                            {row.status === "Borrador" ? (
+                              <>
+                                <Link
+                                  target="_blank"
+                                  title="PDF"
+                                  href={
+                                    service
+                                      ? `${ENDPOINT[service]}${row.guide}`
+                                      : "#"
+                                  }
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <FaFilePdf size={18} />
+                                </Link>
+
+                                <button
+                                  title="Aceptar"
+                                  onClick={() =>
+                                    handleAccept(
+                                      route.address,
+                                      relatedItem.id,
+                                      row
+                                    )
+                                  }
+                                  className="text-green-600 hover:text-green-800"
+                                >
+                                  <FaThumbsUp size={18} />
+                                </button>
+
+                                <button
+                                  title="Rechazar"
+                                  onClick={() =>
+                                    handleReject(
+                                      route.address,
+                                      relatedItem.id,
+                                      row
+                                    )
+                                  }
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <FaThumbsDown size={18} />
+                                </button>
+                              </>
+                            ) : (
+                              <Fragment>
+                                <button
+                                  title="PDF"
+                                  onClick={() => openPDF(route)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <FaFilePdf size={18} />
+                                </button>
+                                <span className="text-xs font-bold uppercase text-gray-500">
+                                  {row.status}
+                                </span>
+                              </Fragment>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </td>
 
-                  {/* MAPA */}
                   <td className="px-5 py-4 text-center align-middle">
                     <button
                       title="Abrir mapa"

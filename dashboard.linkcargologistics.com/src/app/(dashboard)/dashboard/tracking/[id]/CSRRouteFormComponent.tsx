@@ -10,15 +10,9 @@
  * ---------------------------------------------------
  */
 
-import Card from "@/components/card";
 import useFormData from "@/hooks/useFormDataNew";
-import { Fragment, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MdSwapHoriz } from "react-icons/md";
-
+import { useEffect, useState } from "react";
 import RouteFormHeader from "./RouteFormHeader";
-import RouteFormFields from "./RouteFormFields";
-import RouteFormActions from "./RouteFormActions";
 import CSRRouteImportComponent from "./CSRRouteImportComponent";
 
 
