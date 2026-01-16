@@ -21,6 +21,9 @@ Route::get('/dashboard/reports/inventory-status', [RoutesController::class, 'inv
 // 🔹 CRUD de rutas
 Route::prefix('dashboard/routes')->group(function () {
 
+    Route::post('/{id}/set-status-address-by-items', [RoutesController::class, 'setStatusAddressByItems']);
+    
+
     Route::put('{route_id}/setGuideRemote', [RouteItemsController::class, 'setGuideRemote']);
 
     Route::get('/', [RoutesController::class, 'index']);

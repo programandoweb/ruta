@@ -40,6 +40,7 @@ const ExcelUploadForm: React.FC<Props> = ({ setItems, route_id }) => {
       form.append("file", file);
       form.append("route_id", route_id);
       
+      //console.log(route_id)
 
       let BACKEND = "";
       if (window && window.location && window.location.hostname) {

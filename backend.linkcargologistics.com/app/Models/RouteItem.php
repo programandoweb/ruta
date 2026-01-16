@@ -24,7 +24,8 @@ class RouteItem extends Model
     protected $fillable = [
         'route_id',
         'guide',
-        'evidence_urls',          // ✅ agregado
+        'evidence_urls',
+        'json_status',          // ✅ agregado
         'name',
         'phone',
         'origin_address',
@@ -34,11 +35,12 @@ class RouteItem extends Model
         'lat',
         'lng',
         'geo_cached_at',
-        'guide_remote'
+        'guide_remote',
     ];
 
     protected $casts = [
-        'evidence_urls' => 'array',   // ✅ casteo correcto para JSON/array
+        'evidence_urls' => 'array',
+        'json_status'   => 'array',   // ✅ casteo correcto
         'lat'           => 'float',
         'lng'           => 'float',
         'geo_cached_at' => 'datetime',

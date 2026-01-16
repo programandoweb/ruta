@@ -32,6 +32,7 @@ return new class extends Migration
         $table->string('guide');
 
         $table->longtext('evidence_urls')->nullable();
+        $table->json('json_status')->nullable();
 
         $table->string('guide_remote')->nullable();
 

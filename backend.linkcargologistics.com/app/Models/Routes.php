@@ -21,7 +21,14 @@ class Routes extends Model
         'date',
         'employees_id',
         'cache_json',
-        'ia_status'
+        'box_and_guide',
+        'ia_status',
+    ];
+
+    protected $casts = [
+        'cache_json'    => 'array',
+        'box_and_guide' => 'array',
+        'date'          => 'date',
     ];
 
     /**

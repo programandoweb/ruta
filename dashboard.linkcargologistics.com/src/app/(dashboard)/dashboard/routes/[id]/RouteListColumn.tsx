@@ -140,24 +140,29 @@ const RouteListColumn: React.FC<Props> = ({
                   Lat: {route.lat} · Lng: {route.lng}
                 </div>
 
-                <input
-                  type="text"
-                  placeholder="Guía remota (ej: Casa azul, portón negro)"
-                  value={guides[idx]?.value   || remoteGuide?.guide_remote || ""}
-                  className="
-                    mt-3 w-full rounded-lg border border-gray-300
-                    px-3 py-2 text-sm
-                    focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500
-                  "
-                  onChange={(e) =>
-                    handleSendGuideRemote(
-                      e.target.value,
-                      route.lat,
-                      route.lng,
-                      idx
-                    )
-                  }
-                />
+                {
+                  /*
+                    <input
+                      type="text"
+                      placeholder="Guía remota (ej: Casa azul, portón negro)"
+                      value={guides[idx]?.value   || remoteGuide?.guide_remote || ""}
+                      className="
+                        mt-3 w-full rounded-lg border border-gray-300
+                        px-3 py-2 text-sm
+                        focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500
+                      "
+                      onChange={(e) =>
+                        handleSendGuideRemote(
+                          e.target.value,
+                          route.lat,
+                          route.lng,
+                          idx
+                        )
+                      }
+                    />  
+                  */
+                }
+                
 
                 <div className="mt-4 flex justify-end items-center gap-4">
                   <button

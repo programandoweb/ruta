@@ -12,19 +12,18 @@ interface UploadBtnProps {
   className?: string;
   disabled?: boolean;
   fileName?: string;
-  keys?:any;
-  gallery?:any;
+  keys?: any;
+  gallery?: any;
 }
 
 const BasicBtnUpload: React.FC<UploadBtnProps> = ({
   label,
   name,
-  setFormData,
   className,
   disabled,
   fileName,
   keys,
-  gallery:galleryProps,
+  gallery: galleryProps,
 }) => {
   const storage = useAsyncStorage();
 
@@ -35,15 +34,27 @@ const BasicBtnUpload: React.FC<UploadBtnProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) return;
+    // ✅ Aceptar SOLO imágenes
+    if (!file.type.startsWith('image/')) {
+      e.target.value = '';
+      return;
+    }
+
+    // Máx 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      e.target.value = '';
+      return;
+    }
 
     setIsLoading(true);
 
     try {
       const user = await storage.getData("user");
       const formData = new FormData();
+
       formData.append("doc", file);
       formData.append("save_as", "route_items");
+      formData.append("prefixed", name);
       formData.append("key", keys);
       formData.append("content", "evidence_urls");
       if (fileName) formData.append("fileName", fileName);
@@ -76,15 +87,15 @@ const BasicBtnUpload: React.FC<UploadBtnProps> = ({
 
       if (!response.ok) throw new Error();
 
-      const responseData  =   await response.json();
-      const slug          =   responseData?.data?.doc?.slug;
+      const responseData = await response.json();
+      const slug = responseData?.data?.doc?.slug;
 
       if (slug) {
-        // 🔹 Galería interna
-        setGallery((prev) => [...prev, slug]);        
+        setGallery((prev) => [...prev, slug]);
       }
     } finally {
       setIsLoading(false);
+      e.target.value = '';
     }
   };
 
@@ -94,10 +105,8 @@ const BasicBtnUpload: React.FC<UploadBtnProps> = ({
     }
   }, [galleryProps]);
 
-  
   return (
-    <div className={`inline-flex flex-col items-center mt-2 ${className || ""}`}>
-      {/* Botón */}
+    <div className={`inline-flex flex-col items-center ${className || ""}`}>
       <label
         className={`
           inline-flex items-center gap-2
@@ -114,17 +123,17 @@ const BasicBtnUpload: React.FC<UploadBtnProps> = ({
       >
         <MdFileUpload size={16} />
         {isLoading ? "Subiendo…" : label}
+
         {!disabled && (
           <input
             type="file"
             className="hidden"
+            accept="image/*"   // ✅ SOLO imágenes
             onChange={handleUpload}
           />
         )}
       </label>
 
-
-      {/* Galería de miniaturas */}
       {gallery.length > 0 && (
         <div className="mt-2 flex gap-1 flex-wrap justify-center">
           {gallery.map((img, i) => (

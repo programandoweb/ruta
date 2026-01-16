@@ -1,6 +1,6 @@
 import { type Metadata } from "next";
 import React from "react";
-import AllInOneCardView from "@/components/tables/PaginatedCardView ";
+import ColumnsTable from "@/components/tables/ColumnsTable";
 const  title:string     =   "Categorías"
 const   alias:string    =   'routes';
 
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 const TrackingDataTablesPage = () => {
-  return <AllInOneCardView title={title} alias={alias} viewSearchFilter/>      
+  return  <ColumnsTable title={title} alias={alias} viewSearchFilter/>
 };
 
 export default TrackingDataTablesPage;

@@ -26,7 +26,7 @@ const prefixed = "route";
 
 const CSRRouteFormComponent: React.FC<any> = () => {
   const formData = useFormData(false, false, false);
-  const router = useRouter();
+  
 
   const [inputs, setInputs] = useState<any>({
     date: "2025-10-18",

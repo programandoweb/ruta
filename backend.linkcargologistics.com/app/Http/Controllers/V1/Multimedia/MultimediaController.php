@@ -313,62 +313,62 @@ class MultimediaController extends Controller
 
     private function saveEvidenceInTable(Request $request, $doc_return): void
     {
-        
         if (!$request->filled(['save_as', 'key', 'content'])) {
             return;
         }
 
-        $table  = $request->save_as;     // route_items
-        $id     = $request->key;      // id del registro
-        $column = $request->content;  // evidence_urls
+        $table    = $request->save_as;     // route_items
+        $id       = $request->key;         // json {order,lat,lng}
+        $column   = $request->content;     // evidence_urls
+        $prefixed = $request->prefixed;    // evidence_36.76...
 
-        //p([$table, $id, $column]);
-
-        // Seguridad mínima: evitar SQL injection por nombre de tabla/columna
         if (!Schema::hasTable($table) || !Schema::hasColumn($table, $column)) {
             throw new \Exception('Tabla o columna no válida.');
         }
 
-        // Obtener registro actual
-        if(!is_string($id)){
-            throw new \Exception('Datos de entrada no válida.');            
+        if (!is_string($id)) {
+            throw new \Exception('Datos de entrada no válida.');
         }
-        
-        $json       =   json_decode($id, true);
 
-        $record     =   DB::table($table)
-                            ->where('lat', $json["lat"])
-                            ->where('lng', $json["lng"])
-                            ->where('route_id', $json["order"])
-                            ->first();
-        
+        $json = json_decode($id, true);
+
+        $record = DB::table($table)
+            ->where('lat', $json['lat'])
+            ->where('lng', $json['lng'])
+            ->where('route_id', $json['order'])
+            ->first();
+
         if (!$record) {
             throw new \Exception('Registro no encontrado.');
         }
 
-        // Obtener valor actual (JSON)
+        // 🔹 Obtener JSON actual
         $current = $record->{$column};
-
-        // Convertir a array
-        $array = [];
+        $data = [];
 
         if (!empty($current)) {
             $decoded = json_decode($current, true);
             if (is_array($decoded)) {
-                $array = $decoded;
+                $data = $decoded;
             }
         }
 
-        // Push del nuevo archivo
-        $array[] = $doc_return->path; // o slug según tu estructura
-        //p($array);
-        // Guardar nuevamente
+        // 🔹 Inicializar prefijo si no existe
+        if (!isset($data[$prefixed]) || !is_array($data[$prefixed])) {
+            $data[$prefixed] = [];
+        }
+
+        // 🔹 Agregar nueva evidencia
+        $data[$prefixed][] = $doc_return->path;
+
+        // 🔹 Guardar SIN volver a envolver
         DB::table($table)
             ->where('id', $record->id)
             ->update([
-                $column => json_encode($array),
+                $column => json_encode($data),
             ]);
     }
+
 
 
     private function save_in_other_table($request, $doc_return)

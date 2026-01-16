@@ -58,6 +58,7 @@ return new class extends Migration
 
             // 🔹 Campo para guardar el JSON en BD
             $table->json('cache_json')->nullable();
+            $table->json('box_and_guide')->nullable();
 
             $table->string('ia_status')->default('pending'); // pending | processing | done | failed
 

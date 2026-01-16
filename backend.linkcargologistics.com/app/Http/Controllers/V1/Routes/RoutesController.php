@@ -912,7 +912,7 @@ class RoutesController extends Controller
      * - Usa lat/lng existentes; si faltan, geocodifica con Google y persiste en BD
      * - Actualiza $route->cache_json con lat/lng por cada fila
      */
-    private function resolveItemsGoogleMap($route)
+    private function resolveItemsGoogleMapSINStatus($route)
     {
         // 0) Cargar y validar dataset
         $raw     = (string) ($route->cache_json ?? '');
@@ -1127,16 +1127,300 @@ class RoutesController extends Controller
             })->get();            
         }
 
+
+        $items_evidence     =   [];
+
+        foreach ($route->items as $key => $value) {
+            $items_evidence[]=$value->evidence_urls;            
+        }
+
+        $newDataset         = [];
+        $json_box_and_guide = $route->box_and_guide;
+        
+
+        $evidenceIndex = [];
+
+        foreach ($items_evidence as $ev) {
+            if (is_array($ev)) {
+                foreach ($ev as $k => $files) {
+                    if (is_array($files)) {
+                        $evidenceIndex[$k] = $files;
+                    }
+                }
+            }
+        }
+
+        foreach ($dataset as $key => $row) {
+            
+            $rowGuides = [];
+            $row['json_box_and_guide'] = [];
+
+            if (!empty($row['guide'])) {
+                // Extraer solo las guías del dataset (antes del _)
+                $rowGuides = array_map(
+                    fn($g) => explode('_', trim($g))[0],
+                    explode(',', $row['guide'])
+                );
+            }
+
+            
+
+            // Filtrar json_box_and_guide que correspondan a esas guías
+            foreach ($json_box_and_guide as $bg) {
+                if (in_array($bg['guide'], $rowGuides, true)) {
+
+                    $keyEvidence = 'evidence_' . $bg['guide'] . $bg['box'];
+
+                    $bg['evidences'] = $evidenceIndex[$keyEvidence] ?? [];
+
+                    $row['json_box_and_guide'][] = $bg;
+                }
+            }
+
+
+
+            $newDataset[] = $row;
+        }
+
+        //p($newDataset);
+        // Resultado final en $newDataset
+
+
         return response()->success(array_merge([
                 'route'     =>  $route,
                 'ia'        =>  $dataset, // $iaData ahora contiene el dataset con 'id_direccion_item'
-                'dataset'   =>  $dataset,
+                'dataset'   =>  $newDataset,
                 'drivers'   =>  $drivers
                 
-            ], []), 'Hoja de ruta obtenida correctamente 2026. 20255555');
+            ], []), 'Hoja de ruta SINStatus obtenida correctamente 2026. 20255555');
 
         //return response()->success(['dataset' => $dataset], 'OK');
     }
+
+
+    private function resolveItemsGoogleMap($route)
+    {
+        // 0) Cargar y validar dataset
+        $raw     = (string) ($route->cache_json ?? '');
+        $decoded = json_decode($raw, true);
+        $dataset = (is_array($decoded) && isset($decoded['dataset']) && is_array($decoded['dataset']))
+            ? $decoded['dataset']
+            : [];
+
+        if (empty($dataset)) {
+            return [];
+        }
+
+        if ($route->ia_status === "order1") {
+            // 1) API Key (usas GEMINI_API_KEY para Maps)
+            $gmapsKey = env('GEMINI_API_KEY');
+            if (!$gmapsKey) {
+                return $dataset;
+            }
+
+            // 2) Asegurar relación items
+            if (!($route->relationLoaded('items'))) {
+                $route->loadMissing('items');
+            }
+            $items = $route->items ?? collect();
+
+            // 3) Índices de búsqueda
+            $itemsById   = $items->keyBy('id');
+            $itemsByAddr = $items->keyBy('origin_address');
+
+            $normalize = static function (string $s): string {
+                $s = mb_strtolower(trim($s));
+                $s = preg_replace('/[^\p{L}\p{N}\s#,.:-]/u', '', $s);
+                $s = preg_replace('/\s+usa?$/', '', $s);
+                $s = preg_replace('/\s+california$/', '', $s);
+                return preg_replace('/\s+/', ' ', $s);
+            };
+
+            $itemsByAddrNorm = [];
+            foreach ($items as $it) {
+                $key = $normalize((string) $it->origin_address);
+                if ($key !== '') {
+                    $itemsByAddrNorm[$key] = $it;
+                }
+            }
+
+            // 4) Geocodificación
+            $geocode = function (string $address) use ($gmapsKey) {
+                $cacheKey = 'gmaps_geocode:' . md5('US|' . $address);
+
+                return \Illuminate\Support\Facades\Cache::remember(
+                    $cacheKey,
+                    now()->addDays(7),
+                    function () use ($address, $gmapsKey) {
+                        $url    = 'https://maps.googleapis.com/maps/api/geocode/json';
+                        $params = [
+                            'address'    => $address,
+                            'key'        => $gmapsKey,
+                            'language'   => 'en',
+                            'region'     => 'us',
+                            'components' => 'country:US',
+                        ];
+
+                        $resp = \Illuminate\Support\Facades\Http::timeout(15)->get($url, $params);
+                        if (!$resp->successful()) {
+                            return null;
+                        }
+
+                        $json = $resp->json() ?: [];
+                        if (($json['status'] ?? '') !== 'OK') {
+                            return null;
+                        }
+
+                        $results = $json['results'] ?? [];
+                        if (empty($results)) {
+                            return null;
+                        }
+
+                        $loc = $results[0]['geometry']['location'] ?? null;
+                        if (is_array($loc) && isset($loc['lat'], $loc['lng'])) {
+                            return ['lat' => (float) $loc['lat'], 'lng' => (float) $loc['lng']];
+                        }
+
+                        return null;
+                    }
+                );
+            };
+
+            // 5) Procesar filas
+            foreach ($dataset as $i => $row) {
+                $itemId  = $row['id_direccion_item'] ?? null;
+                $address = trim((string) ($row['address'] ?? ''));
+
+                $item = $itemId ? ($itemsById[$itemId] ?? null) : null;
+                if (!$item && $address !== '') {
+                    $item = $itemsByAddr[$address] ?? null;
+                }
+                if (!$item && $address !== '') {
+                    $norm = $normalize($address);
+                    if ($norm !== '' && isset($itemsByAddrNorm[$norm])) {
+                        $item = $itemsByAddrNorm[$norm];
+                    }
+                }
+                if (!$item) {
+                    continue;
+                }
+
+                if (is_numeric($item->lat ?? null) && is_numeric($item->lng ?? null)) {
+                    $dataset[$i]['lat'] = (float) $item->lat;
+                    $dataset[$i]['lng'] = (float) $item->lng;
+                    continue;
+                }
+
+                if (isset($row['lat'], $row['lng']) && is_numeric($row['lat']) && is_numeric($row['lng'])) {
+                    \App\Models\RouteItem::whereKey($item->id)->update([
+                        'lat'           => (float) $row['lat'],
+                        'lng'           => (float) $row['lng'],
+                        'geo_cached_at' => now(),
+                    ]);
+                    continue;
+                }
+
+                $coords = $geocode((string) $item->origin_address);
+                if ($coords) {
+                    \App\Models\RouteItem::whereKey($item->id)->update([
+                        'lat'           => $coords['lat'],
+                        'lng'           => $coords['lng'],
+                        'geo_cached_at' => now(),
+                    ]);
+                    $dataset[$i]['lat'] = $coords['lat'];
+                    $dataset[$i]['lng'] = $coords['lng'];
+                }
+            }
+
+            // 6) Persistir cache_json
+            $route->cache_json = json_encode(
+                ['dataset' => $dataset],
+                JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+            );
+            $route->ia_status = 'completed';
+            $route->save();
+        }
+
+        $drivers = [];
+        if (auth()->user()->hasRole('admin')) {
+            $drivers = \App\Models\User::whereHas('roles', function ($q) {
+                $q->where('name', 'employees');
+            })->get();
+        }
+
+        // -------------------------
+        // Evidencias
+        // -------------------------
+        $items_evidence = [];
+        foreach ($route->items as $value) {
+            $items_evidence[] = $value->evidence_urls;
+        }
+
+        $evidenceIndex = [];
+        foreach ($items_evidence as $ev) {
+            if (is_array($ev)) {
+                foreach ($ev as $k => $files) {
+                    if (is_array($files)) {
+                        $evidenceIndex[$k] = $files;
+                    }
+                }
+            }
+        }
+
+        // -------------------------
+        // 🔹 NUEVO: index de status por guía+caja (json_status)
+        // -------------------------
+        $statusIndex = [];
+        foreach ($route->items as $item) {
+            if (is_array($item->json_status)) {
+                foreach ($item->json_status as $k => $data) {
+                    if (isset($data['status'])) {
+                        $statusIndex[$k] = $data['status'];
+                    }
+                }
+            }
+        }
+
+        // -------------------------
+        // Armar dataset final
+        // -------------------------
+        $newDataset         = [];
+        $json_box_and_guide = $route->box_and_guide;
+
+        foreach ($dataset as $row) {
+            $rowGuides = [];
+            $row['json_box_and_guide'] = [];
+
+            if (!empty($row['guide'])) {
+                $rowGuides = array_map(
+                    fn ($g) => explode('_', trim($g))[0],
+                    explode(',', $row['guide'])
+                );
+            }
+
+            foreach ($json_box_and_guide as $bg) {
+                if (in_array($bg['guide'], $rowGuides, true)) {
+                    $keyEvidence = 'evidence_' . $bg['guide'] . $bg['box'];
+                    $keyStatus   = $bg['guide'] . '_' . $bg['box'];
+
+                    $bg['evidences'] = $evidenceIndex[$keyEvidence] ?? [];
+                    $bg['status']    = $statusIndex[$keyStatus] ?? 'Borrador';
+
+                    $row['json_box_and_guide'][] = $bg;
+                }
+            }
+
+            $newDataset[] = $row;
+        }
+
+        return response()->success([
+            'route'   => $route,
+            'ia'      => $dataset,
+            'dataset' => $newDataset,
+            'drivers' => $drivers,
+        ], 'Hoja de ruta obtenida correctamente 2026. 20255555');
+    }
+
 
 
 
@@ -1160,6 +1444,7 @@ class RoutesController extends Controller
             if(empty($route->cache_json)){
                 return $this->getItemsAll($route);
             }else{
+                //p(5);
                 return $this->resolveItemsGoogleMap($route);
             }            
 
@@ -1734,5 +2019,69 @@ class RoutesController extends Controller
             'routes' => $validated['routes'],
         ], 'Orden de la ruta actualizado correctamente');
     }
+
+
+
+
+
+
+    public function setStatusAddressByItems(Request $request, string $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'route_items'      => 'required|integer|exists:route_items,id',
+            'status'           => 'required|string|in:accept,reject,cancel',
+            'row.guide'        => 'required|string',
+            'row.box'          => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->error('Datos inválidos.', 422, $validator->errors());
+        }
+
+        try {
+            /** @var RouteItem $item */
+            $item = RouteItem::findOrFail($request->route_items);
+
+            // Mapeo frontend → BD
+            $statusMap = [
+                'accept' => 'Agendado',
+                'reject' => 'Rechazado',
+                'cancel' => 'Cancelado',
+            ];
+
+            $dbStatus = $statusMap[$request->status];
+
+            // Clave única por guía + caja
+            $key = $request->row['guide'] . '_' . $request->row['box'];
+
+            // Cargar json_status existente
+            $jsonStatus = is_array($item->json_status) ? $item->json_status : [];
+
+            // Actualizar SOLO esta caja
+            $jsonStatus[$key] = [
+                'status'     => $dbStatus,
+                'updated_at' => now()->toDateTimeString(),
+            ];
+
+            // Persistir
+            $item->json_status = $jsonStatus;
+            $item->save();
+
+            return response()->success([
+                'route_item_id' => $item->id,
+                'json_status'   => $jsonStatus,
+            ], 'Estado actualizado correctamente por item.');
+
+        } catch (ModelNotFoundException $e) {
+            return response()->error('Item no encontrado.', 404);
+        } catch (\Throwable $e) {
+            return response()->error('Error interno: ' . $e->getMessage(), 500);
+        }
+    }
+
+
+
+
+
 
 }
