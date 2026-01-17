@@ -220,13 +220,18 @@ const CSRRouteTableComponent = ({
                               </>
                             ) : (
                               <Fragment>
-                                <button
+                                <Link
+                                  target="_blank"
                                   title="PDF"
-                                  onClick={() => openPDF(route)}
+                                  href={
+                                    service
+                                      ? `${ENDPOINT[service]}${row.guide}`
+                                      : "#"
+                                  }
                                   className="text-red-600 hover:text-red-800"
                                 >
                                   <FaFilePdf size={18} />
-                                </button>
+                                </Link>
                                 <span className="text-xs font-bold uppercase text-gray-500">
                                   {row.status}
                                 </span>
