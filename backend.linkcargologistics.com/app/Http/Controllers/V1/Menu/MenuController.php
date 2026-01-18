@@ -115,9 +115,11 @@ class MenuController extends Controller
                 'guide' => 'required|string|max:255',
             ]);
 
+            //p($validated['guide']);
+
             // 🔎 Buscar item por guía remota
-            $routeItem = RouteItem::where('guide_remote', $validated['guide'])
-                ->with('route') // relación con routes
+            $routeItem = RouteItem::where('guide', 'LIKE', '%'.$validated['guide'] . '%')
+                ->with('route')
                 ->first();
 
             if (!$routeItem) {
@@ -128,13 +130,26 @@ class MenuController extends Controller
             }
 
             // 🔁 Traer ruta completa con sus items
-            $route = Routes::with('items')
-                ->find($routeItem->route_id);
+            $route = Routes::with('items')->find($routeItem->route_id);
 
+            $guiaABuscar = $validated['guide'];
+            $evidenciasEncontradas = [];
+
+            // 🛡️ Agregamos (array) o ?? [] para asegurar que siempre haya algo iterable
+            foreach ((array)($routeItem->evidence_urls ?? []) as $key => $urls) {
+                // Si la clave contiene el código de la guía
+                if (str_contains($key, $guiaABuscar)) {
+                    $evidenciasEncontradas = $urls;
+                    break; 
+                }
+            }
+
+            // $evidenciasEncontradas tendrá los 2 elementos del primer índice
             return response()->success(
                 [
                     'route'      => $route,
                     'route_item' => $routeItem,
+                    'evidenciasEncontradas'=>$evidenciasEncontradas
                 ],
                 'Ruta encontrada por número de guía.'
             );
