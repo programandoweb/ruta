@@ -15,6 +15,8 @@ import { useSearchParams } from 'next/navigation';
 import ResumeComponent from "./Resume";
 import ModalComponent from "../modal/ModalComponent";
 import Image from "next/image";
+import ColumnsTableCards from "./ColumnsTableCards";
+import ColumnsTableDesktop from "./ColumnsTableDesktop";
 
 interface PaginatorData {
   data: any;
@@ -292,183 +294,36 @@ const ColumnsTable = (props: Props) => {
       }      
 
       <div className="mt-8 h-full overflow-x-auto">
-        <table className="w-full">
-  <thead className="rounded-t-lg">
-    <tr className="bg-brand-500 text-white pt-[5px] pb-[5px]">
-      {columnsState?.map((row, key) => {
-        if (row === 'id' || row === 'resume') return;
-        return (
-          <th
-            key={key}
-            className={
-              "border-b border-gray-200 dark:!border-navy-700 pl-2 " +
-              ((classNameTd && classNameTd[key - 1]) || " text-center ")
-            }
-          >
-            {row}
-          </th>
-        );
-      })}
-      {!skipEdit && (
-        <th
-          style={{ width: 100 }}
-          className="border-b border-gray-200 py-[10px] text-center dark:!border-navy-700"
-        >
-          {!loading && columnsState.length > 0
-            ? "Acción"
-            : "No hay datos a mostrar"}
-        </th>
-      )}
-    </tr>
-  </thead>
-  <tbody>
-    {rowsState.map((row, index) => (
-      <tr
-        key={index}
-        className={
-          index % 2 === 0 ? "bg-gray-200 hover:bg-gray-300" : "hover:bg-gray-300"
-        }
-      >
-        {!columnsState.find((search: {}) => search === 'resume') ? (
-          <Fragment>
-            {columnsState?.map((rowColumn, keyColumn) => {
-              if (rowColumn === 'id') return null;
+        {/* MOBILE / TABLET */}
+        <div className="block lg:hidden mt-6">
+          <ColumnsTableCards
+            columnsState={columnsState}
+            rowsState={rowsState}
+            skipEdit={skipEdit}
+            preview={preview}
+            del={del}
+            preFixed={preFixed}
+            subFixed={subFixed}
+            HandleModal={HandleModal}
+            handleResume={handleResume}
+          />
+        </div>
 
-              if (rowColumn === 'cover') {
-                return (
-                  <td
-                    key={keyColumn}
-                    className={
-                      "px-[10px] pt-[5px] pb-[5px] sm:text-[14px] " +
-                      ((classNameTd && classNameTd[keyColumn - 1]) ||
-                        " text-center ")
-                    }
-                  >
-                    <Image
-                      src={row[rowColumn]}
-                      alt="cover image"
-                      width={50}
-                      height={50}
-                      className="rounded"
-                    />
-                  </td>
-                );
-              }
-
-              if (
-                rowColumn.toLowerCase().includes('status') ||
-                rowColumn.toLowerCase().includes('estatus')
-              ) {
-                return (
-                  <td
-                    key={keyColumn}
-                    className={
-                      "px-[10px] pt-[5px] pb-[5px] sm:text-[14px] " +
-                      ((classNameTd && classNameTd[keyColumn - 1]) ||
-                        " text-center ")
-                    }
-                  >
-                    <StatusCell status={row[rowColumn]} />
-                  </td>
-                );
-              }
-
-              return (
-                <td
-                  key={keyColumn}
-                  className={
-                    "px-[10px] pt-[5px] pb-[5px] sm:text-[14px] " +
-                    ((classNameTd && classNameTd[keyColumn - 1]) ||
-                      " text-center ")
-                  }
-                >
-                  {typeof row[rowColumn] === 'object' && row[rowColumn] !== null
-                    ? '—'
-                    : row[rowColumn]}
-                </td>
-              );
-            })}
-          </Fragment>
-        ) : (
-          <Fragment>
-            {columnsState?.map((rowColumn, keyColumn) => {
-              if (rowColumn === 'id' || rowColumn === 'resume') return;
-
-              return (
-                <td
-                  key={keyColumn}
-                  className={
-                    "px-[10px] pt-[5px] pb-[5px] sm:text-[14px] " +
-                    ((classNameTd && classNameTd[keyColumn - 1]) ||
-                      " text-center ")
-                  }
-                >
-                  <div onClick={() => handleResume(row)}>
-                    {rowColumn.toLowerCase().includes('status') ||
-                    rowColumn.toLowerCase().includes('estatus') ||
-                    rowColumn.toLowerCase().includes('estado de pago') ||
-                    rowColumn.toLowerCase().includes('estado') ||
-                    rowColumn.toLowerCase().includes('estado de venta') ? (
-                      <StatusCell status={row[rowColumn]} />
-                    ) : (
-                      <Fragment>
-                        {typeof row[rowColumn] === 'object' && row[rowColumn] !== null
-                          ? '—'
-                          : row[rowColumn]}
-                      </Fragment>
-                    )}
-                  </div>
-                </td>
-              );
-            })}
-          </Fragment>
-        )}
-        <td>
-          <div
-            className={
-              "flex justify-center pt-[5px] pb-[5px] sm:text-[20px] text-center" +
-              (row.Fijo && row.Fijo === 'Sí'
-                ? " pointer-events-none opacity-20"
-                : "")
-            }
-          >
-            {!skipEdit && (
-              <Link
-                href={
-                  document.location.pathname +
-                  "/" +
-                  (preFixed || "") +
-                  String(row.id) +
-                  (subFixed || "")
-                }
-              >
-                <div style={{ display: "inline-block", textAlign: "center" }}>
-                  <MdModeEdit className="text-brand-500" />
-                </div>
-              </Link>
-            )}
-            {preview && (
-              <Link
-                href={
-                  document.location.pathname + "/" + String(row.id) + "?readonly=1"
-                }
-              >
-                <span className="cursor-pointer">
-                  <IoMdSearch className="w-6 h-6 text-blue-500" />
-                </span>
-              </Link>
-            )}
-            {del && (
-              <span className="cursor-pointer" onClick={() => HandleModal(row)}>
-                <IoMdTrash className="w-6 h-6 text-red-500" />
-              </span>
-            )}
-          </div>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
+        {/* DESKTOP */}
+        <div className="hidden lg:block mt-6">
+          <ColumnsTableDesktop
+            columnsState={columnsState}
+            rowsState={rowsState}
+            classNameTd={classNameTd}
+            skipEdit={skipEdit}
+            preview={preview}
+            del={del}
+            preFixed={preFixed}
+            subFixed={subFixed}
+            HandleModal={HandleModal}
+            handleResume={handleResume}
+          />
+        </div>
 
         { !load && <TablePaginationDemo paginator={paginator} /> }
       </div>
