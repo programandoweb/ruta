@@ -20,6 +20,7 @@ import {
 import BasicBtnUpload from "@/components/buttom/BasicBtnUpload";
 import Link from "next/link";
 import CommentsSectionContainer from "@/components/comments";
+import { DAYS } from "@/constants/days";
 
 const ENDPOINT = {
   MOV: "https://app.movexlogistica.com/api/v1/packages/pdf/guide?guideNumber=",
@@ -60,7 +61,7 @@ const CSRRouteTable = ({
         <tbody className="bg-white divide-y divide-gray-100">
           {routes.map((route: any, index: number) => {
             const relatedItem = itemsById.get(route.phone);
-
+            console.log(relatedItem)
             return (
               <tr key={route.order} className="hover:bg-gray-50 transition">
                 <td className="px-5 py-4 align-top">
@@ -81,6 +82,12 @@ const CSRRouteTable = ({
                         <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">
                           {relatedItem.status}
                         </span>
+                      </p>
+                      <p className="">
+                        <b>Observación:</b> {relatedItem.observation}
+                      </p>
+                      <p className="">
+                        <b>Día:</b> {DAYS[relatedItem.day]}
                       </p>
                       <p>
                         <b>Acción:</b>{" "}
