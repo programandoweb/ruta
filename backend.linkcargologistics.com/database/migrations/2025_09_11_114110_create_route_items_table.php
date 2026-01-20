@@ -41,6 +41,7 @@ return new class extends Migration
         $table->string('phone');
         $table->string('origin_address');
         $table->string('destination_address')->nullable();
+        $table->longtext('observation')->nullable();
         $table->enum('type', ['deliver', 'pickup']);
 
         $table->enum('status', [
@@ -54,6 +55,8 @@ return new class extends Migration
         // ✅ Coordenadas para enrutamiento
         $table->decimal('lat', 10, 7)->nullable();
         $table->decimal('lng', 10, 7)->nullable();
+
+        $table->integer('day')->nullable()->default(0);
 
         // ✅ (Opcional) fecha de caché de geolocalización
         $table->timestamp('geo_cached_at')->nullable();

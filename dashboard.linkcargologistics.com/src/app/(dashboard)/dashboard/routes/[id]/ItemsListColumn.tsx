@@ -1,5 +1,6 @@
 "use client";
 
+import { DAYS } from "@/constants/days";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { MdDelete } from "react-icons/md";
 
@@ -25,6 +26,7 @@ const ItemsListColumn: React.FC<Props> = ({
         <div className="space-y-4">
           {items.map((item, idx) => {
             const isExpanded = expandedItems.includes(idx);
+            //console.log(item)
             return (
               <div
                 key={item.id || idx}
@@ -53,6 +55,13 @@ const ItemsListColumn: React.FC<Props> = ({
                     )}
                     <p className="text-sm text-gray-700">
                       Teléfono: {item.phone}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      Observación: {item.observation}
+                    </p>
+
+                    <p className="text-sm text-gray-900">
+                      Día: {DAYS[item.day]}
                     </p>
 
                     <div>

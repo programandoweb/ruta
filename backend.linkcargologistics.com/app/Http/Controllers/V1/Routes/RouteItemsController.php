@@ -176,6 +176,102 @@ class RouteItemsController extends Controller
 
             $rows = Excel::toArray([], $request->file('file'))[0] ?? [];
 
+            
+
+            $items = [];
+            $boxAndGuide = [];
+
+            foreach ($rows as $index => $row) {
+                // Saltamos encabezado o filas sin teléfono (columna 2)
+                if ($index === 0 || empty($row[2])) {
+                    continue;
+                }
+
+                // Procesar columna GUIDE_BOX (GUIA_CAJA_TIPO) - Columna 0
+                if (!empty($row[0])) {
+                    $pairs = explode(',', $row[0]);
+
+                    foreach ($pairs as $pair) {
+                        $parts = explode('_', trim($pair));
+                        [$guide, $box, $service] = array_pad($parts, 3, null);
+
+                        if ($guide && $box) {
+                            $boxAndGuide[] = [
+                                'guide'   => $guide,
+                                'box'     => $box,
+                                'service' => $service,
+                            ];
+                        }
+                    }
+                }
+
+                //p($row[9]);
+
+                // Mapeo de items
+                $items[] = [
+                    'guide'               => $row[0] ?? null,
+                    'name'                => $row[1] ?? null,
+                    'phone'               => isset($row[2]) ? (string) $row[2] : '',
+                    'origin_address'      => $row[3] ?? '',
+                    'destination_address' => $row[4] ?? '',
+                    'type'                => $row[5] ?? 'deliver',
+                    'observation'         => $row[9] ?? 'Sin observación',
+                    'status'              => 'Borrador',
+                    // ✅ Nueva columna 'day' (Índice 6). Si está vacío o no es numérico, por defecto 1.
+                    'day'                 => (!empty($row[10]) && is_numeric($row[10])) ? (int)$row[10] : 1,
+                ];
+            }
+
+            if (empty($items)) {
+                return response()->error('El archivo no contiene registros válidos.', 422);
+            }
+
+            // Usamos el modelo Routes según tu código original
+            $route = Routes::findOrFail($request->route_id);
+
+            // Limpiar items anteriores e insertar los nuevos
+            $route->items()->delete();
+            $route->items()->createMany($items);
+
+            // Actualizar la ruta con la info de cajas procesada
+            $route->update([
+                'box_and_guide' => $boxAndGuide,
+            ]);
+
+            DB::commit();
+
+            return response()->success(
+                [
+                    'route_id'       => $route->id,
+                    'items_imported' => count($items),
+                    'boxes_detected' => count($boxAndGuide),
+                    'box_and_guide'  => $boxAndGuide,
+                ],
+                'Excel importado correctamente con asignación de días.'
+            );
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
+    public function importExcelSinDia(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'file'     => 'required|file|mimes:xls,xlsx|max:5120',
+                'route_id' => 'required|exists:routes,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->error($validator->errors()->first(), 422);
+            }
+
+            $rows = Excel::toArray([], $request->file('file'))[0] ?? [];
+
             $items = [];
             $boxAndGuide = [];
 
