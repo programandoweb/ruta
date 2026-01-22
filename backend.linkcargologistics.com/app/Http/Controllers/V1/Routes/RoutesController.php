@@ -18,6 +18,16 @@ use App\Jobs\GenerateRouteCacheJob;
 
 class RoutesController extends Controller
 {
+    protected $modelId;
+    protected $url;
+
+    public function __construct() {
+        $apiKey             =    env('GEMINI_API_KEY');
+        $this->modelId      =   "gemini-3-flash"; // O "gemini-3-flash-preview"
+        $this->url          =   "https://generativelanguage.googleapis.com/v1beta/models/{$this->modelId}:generateContent?key={$apiKey}";
+        $this->url          =   "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+    }
+
     /**
      * GET /routes
      * Listado paginado de rutas
@@ -193,7 +203,8 @@ class RoutesController extends Controller
 
                 $apiKey = env('GEMINI_API_KEY');
                 // ✅ CORRECCIÓN DE URL
-                $url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+                $url = $this->url;
+                
 
                 // ✅ CORRECCIÓN DE TIMEOUT
                 $response = Http::withHeaders([
@@ -327,7 +338,7 @@ class RoutesController extends Controller
                     // 🔹 Llamada a Gemini
                     $apiKey = env('GEMINI_API_KEY');
                     // ✅ CORRECCIÓN DE URL
-                    $url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+                    $url = $this->url;
                     // ✅ CORRECCIÓN DE TIMEOUT
                     $response = Http::timeout(350)->post($url, [
                         'contents' => [['role' => 'user', 'parts' => [['text' => $prompt]]]]
@@ -427,7 +438,7 @@ class RoutesController extends Controller
                     'route'  => $route,
                 ], 'Hoja de ruta vacía 1');
             }
-
+            
             return $this->show_cache_fisico($id);
 
             $iaData = []; 
@@ -613,6 +624,9 @@ class RoutesController extends Controller
     y finaliza en:
     DESTINO: {$destination}
 
+    importante destacar que la ruta inicia en {$origin} pasa en este orden en California USA: Mendota -> Dos palos -> 
+    Los Baños -> Santa Cruz -> san josé -> San MAteo -> Fremont -> San Pablo -> Rodeo -> Dixon -> Sacramento {$destination}
+
     Restricciones:
     - Usa solo las paradas listadas a continuación.
     - No incluyas el ORIGEN ni el DESTINO en el resultado.
@@ -629,7 +643,7 @@ class RoutesController extends Controller
     EOT;
 
         $apiKey = env('GEMINI_API_KEY');
-        $url    = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+        $url = $this->url;
 
         $dataset = [];
         try {
@@ -694,6 +708,7 @@ class RoutesController extends Controller
 
     public function getItemsAll($route)
     {
+        
         $origin      = (string) $route->origin_address;
         $destination = (string) $route->destination_address;
 
@@ -710,12 +725,16 @@ class RoutesController extends Controller
 
         $addressList = "- " . implode("\n- ", array_map('trim', $stops));
 
+        /*
         $prompt = <<<EOT
     Actúa como experto en optimización de rutas.
     Ordena cronológicamente las PARADAS intermedias para un recorrido que inicia en:
     ORIGEN: {$origin}
     y finaliza en:
     DESTINO: {$destination}
+
+    importante destacar que la ruta inicia en {$origin} pasa en este orden en California USA: Mendota -> Dos palos -> 
+    Los Baños -> Santa Cruz -> san josé -> San MAteo -> Fremont -> San Pablo -> Rodeo -> Dixon -> Sacramento {$destination}
 
     Reglas:
     - Usa únicamente las paradas listadas.
@@ -730,11 +749,32 @@ class RoutesController extends Controller
     PARADAS (desordenadas):
     {$addressList}
     EOT;
+    */
 
-        $apiKey = env('GEMINI_API_KEY');
-        $url    = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+    $prompt = <<<EOT
+Actúa como experto en logística y optimización de rutas.
+Tu tarea es ordenar las PARADAS intermedias de forma lógica para un conductor que viaja de SUR a NORTE en California.
 
-        $dataset = [];
+CONTEXTO DE RUTA:
+- INICIO (Punto A): {$origin}
+- FINAL (Punto B): {$destination}
+
+LÓGICA DE PROGRESIÓN GEOGRÁFICA (Usa este orden de ciudades como guía estricta):
+Fresno -> Mendota -> Dos Palos -> Los Baños -> Gilroy -> Santa Cruz -> San José -> San Mateo -> Fremont -> San Pablo -> Rodeo -> Fairfield -> Dixon -> Sacramento.
+
+Reglas:
+1. Ordena las PARADAS basándote en la cercanía a la ruta lógica mencionada.
+2. Usa únicamente las direcciones proporcionadas en la lista de abajo.
+3. No incluyas el ORIGEN ni el DESTINO dentro del JSON.
+4. Devuelve EXCLUSIVAMENTE un JSON válido.
+
+PARADAS A ORDENAR:
+{$addressList}
+EOT;
+
+        $apiKey     =   env('GEMINI_API_KEY');
+        $url        =   $this->url;
+        $dataset    =   [];
         try {
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->timeout(300)
@@ -744,7 +784,8 @@ class RoutesController extends Controller
                         'parts' => [['text' => $prompt]],
                     ]],
                 ]);
-
+            /**bUSCAME AQUI */
+            //p($response);
             if ($response->successful()) {
                 $raw = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
                 $clean = trim($raw);
@@ -761,6 +802,8 @@ class RoutesController extends Controller
             // noop
         }
 
+        //p($dataset);
+
         if (empty($dataset)) {
             $i = 1;
             foreach ($stops as $addr) {
@@ -768,6 +811,7 @@ class RoutesController extends Controller
             }
         }
 
+        
         // ---------- Enriquecimiento sin alterar la lógica anterior ----------
         // Índices por dirección para mapear metadatos originales del item
         $items = $route->items ?? collect();
@@ -809,12 +853,15 @@ class RoutesController extends Controller
         unset($row);
         // -------------------------------------------------------------------
 
+        //p($dataset);
         // Persistir opcionalmente
-        $route->cache_json = json_encode(['dataset' => $dataset], JSON_UNESCAPED_UNICODE);
-        $route->ia_status  = 'order1';
+        //$route->cache_json = json_encode(['dataset' => $dataset], JSON_UNESCAPED_UNICODE);
+        $route->cache_json      =   json_encode(['dataset' => $dataset]);
+        $route->prompt          =   $prompt;
+        $route->ia_status       =   'order1';
         $route->save();
 
-        return response()->success(['dataset' => $dataset], 'OK');
+        return response()->success(['dataset' => $dataset,"prompt"=>$prompt], 'OK');
     }
 
     public function getItemsAllX2($route)
@@ -857,7 +904,7 @@ class RoutesController extends Controller
     EOT;
 
         $apiKey = env('GEMINI_API_KEY');
-        $url    = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+        $url = $this->url;
 
         $dataset = [];
         try {
@@ -1486,6 +1533,8 @@ class RoutesController extends Controller
                     - **Punto de Destino:** {$route->destination_address}
                     - **Direcciones de Recogida:**
                     {$addressList}
+                    importante destacar que la ruta inicia en {$route->origin_address} pasa en este orden en California USA: Mendota -> Dos palos -> 
+                    Los Baños -> Santa Cruz -> san josé -> San MAteo -> Fremont -> San Pablo -> Rodeo -> Dixon -> Sacramento
 
                     ### FORMATO DE SALIDA OBLIGATORIO
                     Proporciona la respuesta dividida en dos secciones EXACTAS, separadas por "---". No añadas ninguna otra explicación fuera de este formato.
@@ -1769,7 +1818,7 @@ class RoutesController extends Controller
                     $apiKey = env('GEMINI_API_KEY');
 
                     // ✅ CORRECCIÓN DE URL
-                    $url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+                    $url = $this->url;
 
                     // ✅ CORRECCIÓN DE TIMEOUT
                     $response = Http::timeout(350)->post($url, [
@@ -2079,6 +2128,97 @@ class RoutesController extends Controller
         }
     }
 
+
+    public function setIaManual(Request $request, string $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'prompt' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->error('Prompt inválido.', 422, $validator->errors());
+        }
+
+        try {
+            /** @var Routes $route */
+            $route = Routes::with('items')->findOrFail($id);
+
+            // 1️⃣ Parsear JSON manual
+            $rawPrompt = trim($request->prompt);
+            $dataset   = json_decode($rawPrompt, true);
+
+            if (!is_array($dataset)) {
+                return response()->error('El contenido no es un JSON válido.', 422);
+            }
+
+            // 2️⃣ Validar estructura mínima
+            foreach ($dataset as $row) {
+                if (!isset($row['order'], $row['address'])) {
+                    return response()->error(
+                        'Cada fila debe contener "order" y "address".',
+                        422
+                    );
+                }
+            }
+
+            // 3️⃣ Reutilizar enriquecimiento EXACTO de getItemsAll()
+            $items            = $route->items ?? collect();
+            $itemsByAddr      = $items->keyBy('origin_address');
+
+            $normalize = static function (string $s): string {
+                $s = mb_strtolower(trim($s));
+                $s = preg_replace('/[^\p{L}\p{N}\s#,.:-]/u', '', $s);
+                $s = preg_replace('/\s+usa?$/', '', $s);
+                $s = preg_replace('/\s+california$/', '', $s);
+                return preg_replace('/\s+/', ' ', $s);
+            };
+
+            $itemsByAddrNorm = [];
+            foreach ($items as $it) {
+                $k = $normalize((string) $it->origin_address);
+                if ($k !== '') {
+                    $itemsByAddrNorm[$k] = $it;
+                }
+            }
+
+            foreach ($dataset as &$row) {
+                $addr = (string) ($row['address'] ?? '');
+                $item = $itemsByAddr->get($addr);
+
+                if (!$item && $addr !== '') {
+                    $norm = $normalize($addr);
+                    if (isset($itemsByAddrNorm[$norm])) {
+                        $item = $itemsByAddrNorm[$norm];
+                    }
+                }
+
+                $row['guide']               = $item->guide               ?? null;
+                $row['name']                = $item->name                ?? null;
+                $row['phone']               = isset($item->phone) ? (string) $item->phone : '';
+                $row['origin_address']      = $item->origin_address      ?? $addr;
+                $row['destination_address'] = $item->destination_address ?? '';
+                $row['type']                = $item->type                ?? 'deliver';
+            }
+            unset($row);
+
+            // 4️⃣ Persistir resultado manual
+            $route->cache_json = json_encode(
+                ['dataset' => $dataset],
+                JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+            );
+            $route->prompt    = $rawPrompt;
+            $route->ia_status = 'order1';
+            $route->save();
+
+            // 5️⃣ Resolver coordenadas (flujo normal)
+            return $this->resolveItemsGoogleMap($route);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->error('Ruta no encontrada.', 404);
+        } catch (\Throwable $e) {
+            return response()->error($e->getMessage(), 500);
+        }
+    }
 
 
 

@@ -35,6 +35,8 @@ Route::prefix('dashboard/routes')->group(function () {
     Route::put('/{id}', [RoutesController::class, 'update']);
     Route::delete('/{id}', [RoutesController::class, 'destroy']);
 
+    Route::post('/{id}/iaManual', [RoutesController::class, 'setIaManual']);
+
     // 👇 rutas específicas sobre una ruta existente
     Route::post('/{id}/set-status-address', [RoutesController::class, 'setStatusAddress']);
     Route::put('/{id}/reorder', [RoutesController::class, 'reorder']); // ✅ nueva

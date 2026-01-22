@@ -23,6 +23,7 @@ class Routes extends Model
         'cache_json',
         'box_and_guide',
         'ia_status',
+        'prompt',
     ];
 
     protected $casts = [

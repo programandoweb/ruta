@@ -56,6 +56,8 @@ return new class extends Migration
             // Fecha programada
             $table->date('date')->nullable();
 
+            $table->longtext('prompt')->nullable();
+            
             // 🔹 Campo para guardar el JSON en BD
             $table->json('cache_json')->nullable();
             $table->json('box_and_guide')->nullable();

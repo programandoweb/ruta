@@ -55,6 +55,6 @@ class RouteItem extends Model
      */
     public function route(): BelongsTo
     {
-        return $this->belongsTo(Route::class, 'route_id');
+        return $this->belongsTo(Routes::class, 'route_id');
     }
 }

@@ -129,6 +129,8 @@ class MenuController extends Controller
                 );
             }
 
+            
+
             // 🔁 Traer ruta completa con sus items
             $route = Routes::with('items')->find($routeItem->route_id);
 
