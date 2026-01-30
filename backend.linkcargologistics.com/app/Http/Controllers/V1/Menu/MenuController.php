@@ -123,9 +123,9 @@ class MenuController extends Controller
                 ->first();
 
             if (!$routeItem) {
-                return response()->error(
+                return response()->success(
+                    [],
                     'No se encontró ninguna ruta asociada a esta guía.',
-                    404
                 );
             }
 
@@ -137,6 +137,7 @@ class MenuController extends Controller
             $guiaABuscar = $validated['guide'];
             $evidenciasEncontradas = [];
 
+            //p($routeItem);
             // 🛡️ Agregamos (array) o ?? [] para asegurar que siempre haya algo iterable
             foreach ((array)($routeItem->evidence_urls ?? []) as $key => $urls) {
                 // Si la clave contiene el código de la guía

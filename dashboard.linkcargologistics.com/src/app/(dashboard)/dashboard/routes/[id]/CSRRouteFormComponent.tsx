@@ -150,7 +150,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
       "post",
       { prompt: manualIa }
     );
-    document.location.reload()
+    //document.location.reload()
     //setProcessingIa(false);
     //getInit();
   };

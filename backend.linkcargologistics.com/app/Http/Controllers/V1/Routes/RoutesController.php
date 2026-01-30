@@ -2128,8 +2128,120 @@ EOT;
         }
     }
 
-
     public function setIaManual(Request $request, string $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'prompt' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->error('Prompt inválido.', 422, $validator->errors());
+        }
+
+        try {
+            /** @var Routes $route */
+            $route = Routes::with('items')->findOrFail($id);
+
+            // 1️⃣ Parsear JSON manual
+            $rawPrompt = trim($request->prompt);
+            $decoded   = json_decode($rawPrompt, true);
+
+            if (!is_array($decoded)) {
+                return response()->error('El contenido no es un JSON válido.', 422);
+            }
+
+            // 2️⃣ Normalización de Estructura (Extraer array si viene envuelto)
+            // Soporta: { "paradas_ordenadas": [...] } o { "dataset": [...] } o [...]
+            $dataset = $decoded;
+            if (isset($decoded['paradas_ordenadas'])) {
+                $dataset = $decoded['paradas_ordenadas'];
+            } elseif (isset($decoded['dataset'])) {
+                $dataset = $decoded['dataset'];
+            }
+
+            // 3️⃣ Validar y Normalizar llaves de cada fila
+            foreach ($dataset as &$row) {
+                // Homologar "orden" -> "order"
+                if (isset($row['orden']) && !isset($row['order'])) {
+                    $row['order'] = $row['orden'];
+                }
+                // Homologar "direccion" -> "address"
+                if (isset($row['direccion']) && !isset($row['address'])) {
+                    $row['address'] = $row['direccion'];
+                }
+
+                // Validar que ahora sí existan las llaves requeridas
+                if (!isset($row['order'], $row['address'])) {
+                    return response()->error(
+                        'Cada fila debe contener "order" (o "orden") y "address" (o "direccion").',
+                        422
+                    );
+                }
+            }
+            unset($row); // Limpiar referencia del loop
+
+            // 4️⃣ Reutilizar enriquecimiento EXACTO de getItemsAll()
+            $items       = $route->items ?? collect();
+            $itemsByAddr = $items->keyBy('origin_address');
+
+            $normalize = static function (string $s): string {
+                $s = mb_strtolower(trim($s));
+                $s = preg_replace('/[^\p{L}\p{N}\s#,.:-]/u', '', $s);
+                $s = preg_replace('/\s+usa?$/', '', $s);
+                $s = preg_replace('/\s+california$/', '', $s);
+                return preg_replace('/\s+/', ' ', $s);
+            };
+
+            $itemsByAddrNorm = [];
+            foreach ($items as $it) {
+                $k = $normalize((string) $it->origin_address);
+                if ($k !== '') {
+                    $itemsByAddrNorm[$k] = $it;
+                }
+            }
+
+            foreach ($dataset as &$row) {
+                $addr = (string) ($row['address'] ?? '');
+                $item = $itemsByAddr->get($addr);
+
+                if (!$item && $addr !== '') {
+                    $norm = $normalize($addr);
+                    if (isset($itemsByAddrNorm[$norm])) {
+                        $item = $itemsByAddrNorm[$norm];
+                    }
+                }
+
+                // Enriquecer el dataset con la info real de la base de datos de Ivoolve
+                $row['guide']               = $item->guide                ?? null;
+                $row['name']                = $item->name                 ?? null;
+                $row['phone']               = isset($item->phone) ? (string) $item->phone : '';
+                $row['origin_address']      = $item->origin_address       ?? $addr;
+                $row['destination_address'] = $item->destination_address  ?? '';
+                $row['type']                = $item->type                 ?? 'deliver';
+            }
+            unset($row);
+
+            // 5️⃣ Persistir resultado manual
+            $route->cache_json = json_encode(
+                ['dataset' => $dataset],
+                JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+            );
+            $route->prompt    = $rawPrompt;
+            $route->ia_status = 'order1';
+            $route->save();
+
+            // 6️⃣ Resolver coordenadas (flujo normal de Google Maps)
+            return $this->resolveItemsGoogleMap($route);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->error('Ruta no encontrada.', 404);
+        } catch (\Throwable $e) {
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
+    public function setIaManualOLD(Request $request, string $id)
     {
         $validator = Validator::make($request->all(), [
             'prompt' => 'required|string',
