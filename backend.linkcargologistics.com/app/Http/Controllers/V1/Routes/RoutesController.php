@@ -725,7 +725,7 @@ class RoutesController extends Controller
 
         $addressList = "- " . implode("\n- ", array_map('trim', $stops));
 
-        /*
+        
         $prompt = <<<EOT
     Actúa como experto en optimización de rutas.
     Ordena cronológicamente las PARADAS intermedias para un recorrido que inicia en:
@@ -749,9 +749,9 @@ class RoutesController extends Controller
     PARADAS (desordenadas):
     {$addressList}
     EOT;
-    */
-
-    $prompt = <<<EOT
+    
+    
+    $prompt2 = <<<EOT
 Actúa como experto en logística y optimización de rutas.
 Tu tarea es ordenar las PARADAS intermedias de forma lógica para un conductor que viaja de SUR a NORTE en California.
 
@@ -772,7 +772,9 @@ PARADAS A ORDENAR:
 {$addressList}
 EOT;
 
+
         $apiKey     =   env('GEMINI_API_KEY');
+        
         $url        =   $this->url;
         $dataset    =   [];
         try {
@@ -785,19 +787,26 @@ EOT;
                     ]],
                 ]);
             /**bUSCAME AQUI */
-            //p($response);
+            
             if ($response->successful()) {
+                
                 $raw = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
                 $clean = trim($raw);
 
+                
+
                 if ($clean !== '' && ($clean[0] ?? '') === '[') {
                     $dataset = json_decode($clean, true) ?? [];
+                    //p([$clean,"raw1"]);
                 }
 
                 if (empty($dataset) && preg_match('/\[\s*{[\s\S]*}\s*\]/', $raw, $m)) {
+                    //p([$clean,"raw2"]);
                     $dataset = json_decode($m[0], true) ?? [];
                 }
+               // p($dataset);
             }
+            //p($response);
         } catch (\Throwable $e) {
             // noop
         }
@@ -861,7 +870,7 @@ EOT;
         $route->ia_status       =   'order1';
         $route->save();
 
-        return response()->success(['dataset' => $dataset,"prompt"=>$prompt], 'OK');
+        return response()->success(['dataset' => $dataset,"prompt"=>$prompt2], 'OK');
     }
 
     public function getItemsAllX2($route)
