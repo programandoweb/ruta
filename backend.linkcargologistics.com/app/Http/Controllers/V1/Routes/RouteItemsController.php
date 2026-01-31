@@ -182,6 +182,7 @@ class RouteItemsController extends Controller
             $boxAndGuide = [];
 
             foreach ($rows as $index => $row) {
+                //p([$row[7],$row[8]]);
                 // Saltamos encabezado o filas sin teléfono (columna 2)
                 if ($index === 0 || empty($row[2])) {
                     continue;
@@ -191,15 +192,19 @@ class RouteItemsController extends Controller
                 if (!empty($row[0])) {
                     $pairs = explode(',', $row[0]);
 
+                    
+
                     foreach ($pairs as $pair) {
                         $parts = explode('_', trim($pair));
                         [$guide, $box, $service] = array_pad($parts, 3, null);
 
                         if ($guide && $box) {
                             $boxAndGuide[] = [
-                                'guide'   => $guide,
-                                'box'     => $box,
-                                'service' => $service,
+                                'deposit'   => $row[8],
+                                'paymnent'  => $row[7],
+                                'guide'     => $guide,
+                                'box'       => $box,
+                                'service'   => $service,
                             ];
                         }
                     }

@@ -37,8 +37,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
     date: today,
     name: "Carlos Ramirez",
     phone: "559-123-4567",
-    destination_address: "7745 Laurie Way, Sacramento, CA 95832",
-    origin_address:"Fresno City Hall, 2600 Fresno St, Fresno, CA 93721",
+    destination_address: "8861 Houghton Rd, Bakersfield, CA 93311, Estados Unidos",
+    origin_address:"QH9R+P9, Roseville, CA 95747, Estados Unidos",
     type: "deliver",
   });
 

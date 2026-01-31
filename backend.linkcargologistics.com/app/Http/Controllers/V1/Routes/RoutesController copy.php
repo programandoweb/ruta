@@ -726,14 +726,44 @@ class RoutesController extends Controller
         $addressList = "- " . implode("\n- ", array_map('trim', $stops));
 
         
-        $prompt2 = <<<EOT
+        /*
+        $prompt = <<<EOT
     Actúa como experto en optimización de rutas.
     Ordena cronológicamente las PARADAS intermedias para un recorrido que inicia en:
-    
+    ORIGEN: {$origin}
+    y finaliza en:
+    DESTINO: {$destination}
+
+    importante destacar que la ruta inicia en {$origin} pasa en este orden en California USA: Mendota -> Dos palos -> 
+    Los Baños -> Santa Cruz -> san josé -> San MAteo -> Fremont -> San Pablo -> Rodeo -> Dixon -> Sacramento {$destination}
+
+    Reglas:
+    - Usa únicamente las paradas listadas.
+    - No incluyas ORIGEN ni DESTINO en el resultado.
+    - No alteres el texto de las direcciones.
+    - Devuelve EXCLUSIVAMENTE un JSON válido (sin texto adicional), con forma:
+    [
+    { "order": 1, "address": "..." },
+    { "order": 2, "address": "..." }
+    ]
+
+    PARADAS (desordenadas):
+    {$addressList}
+    EOT;
+    */
+
+
+    $prompt = <<<EOT
+    Actúa como experto en logística y optimización de rutas.
+    Tu tarea es ordenar las PARADAS intermedias de forma lógica para un conductor que viaja en California.
+
     CONTEXTO DE RUTA:
     - INICIO (Punto A): {$origin}
     - FINAL (Punto B): {$destination}
-    
+
+
+    importante destacar que la ruta inicia en {$origin} pasa en este orden en California USA {$destination}
+
     Reglas:
     - Usa únicamente las paradas listadas.
     - No incluyas ORIGEN ni DESTINO en el resultado.
@@ -748,8 +778,8 @@ class RoutesController extends Controller
     {$addressList}
     EOT;
     
-
-    $prompt = <<<EOT
+    
+    $prompt2 = <<<EOT
 Actúa como experto en logística y optimización de rutas.
 Tu tarea es ordenar las PARADAS intermedias de forma lógica para un conductor que viaja en California.
 
@@ -757,11 +787,6 @@ CONTEXTO DE RUTA:
 - INICIO (Punto A): {$origin}
 - FINAL (Punto B): {$destination}
 
-- Devuelve EXCLUSIVAMENTE un JSON válido (sin texto adicional), con forma:
-    [
-    { "order": 1, "address": "..." },
-    { "order": 2, "address": "..." }
-    ]
 
 Reglas:
 1. Ordena las PARADAS basándote en la cercanía a la ruta lógica mencionada.
@@ -773,45 +798,41 @@ PARADAS A ORDENAR:
 {$addressList}
 EOT;
 
+
         $apiKey     =   env('GEMINI_API_KEY');
-
-        //p($apiKey);
-
+        
         $url        =   $this->url;
         $dataset    =   [];
         try {
-            // ✅ CORRECCIÓN DE TIMEOUT
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json'
-            ])->timeout(350)->post($url, [
-                'contents' => [
-                    [
-                        'role' => 'user',
-                        'parts' => [
-                            ['text' => $prompt]
-                        ]
-                    ]
-                ]
-            ]);
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->timeout(300)
+                ->post($url, [
+                    'contents' => [[
+                        'role'  => 'user',
+                        'parts' => [['text' => $prompt]],
+                    ]],
+                ]);
             /**bUSCAME AQUI */
-            //p($prompt2);
+            
             if ($response->successful()) {
-                //echo $response->json();exit;
+                
                 $raw = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
                 $clean = trim($raw);
 
+                
+
                 if ($clean !== '' && ($clean[0] ?? '') === '[') {
                     $dataset = json_decode($clean, true) ?? [];
+                    //p([$clean,"raw1"]);
                 }
 
                 if (empty($dataset) && preg_match('/\[\s*{[\s\S]*}\s*\]/', $raw, $m)) {
+                    //p([$clean,"raw2"]);
                     $dataset = json_decode($m[0], true) ?? [];
                 }
-            } else {
-                //p($response->status());
-                p($response->body()); // Aquí verás errores de API Key o cuotas
+               // p($dataset);
             }
-            //p("fin");
+            //p($response);
         } catch (\Throwable $e) {
             // noop
         }
@@ -875,7 +896,7 @@ EOT;
         $route->ia_status       =   'order1';
         $route->save();
 
-        return response()->success(['dataset' => $dataset,"prompt"=>$prompt], 'OK');
+        return response()->success(['dataset' => $dataset,"prompt"=>$prompt2], 'OK');
     }
 
     public function getItemsAllX2($route)

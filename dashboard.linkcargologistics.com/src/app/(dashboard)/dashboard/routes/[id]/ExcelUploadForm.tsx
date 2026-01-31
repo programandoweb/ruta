@@ -69,7 +69,7 @@ const ExcelUploadForm: React.FC<Props> = ({ setItems, route_id }) => {
       const responseData = await response.json();
 
       if (responseData?.data?.items_imported) {
-        document.location.reload();
+        //document.location.reload();
         //setItems(responseData.data.items);
       }
     } catch (err) {
@@ -96,7 +96,7 @@ const ExcelUploadForm: React.FC<Props> = ({ setItems, route_id }) => {
         disabled={!file || loading}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
       >
-        {loading ? "Subiendo..." : "Subir y Procesar"}
+        {loading ? "Subiendo..." : "Subir y Procesar 2"}
       </button>
     </div>
   );

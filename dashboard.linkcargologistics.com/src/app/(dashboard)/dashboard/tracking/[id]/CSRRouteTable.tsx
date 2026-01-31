@@ -21,6 +21,7 @@ import BasicBtnUpload from "@/components/buttom/BasicBtnUpload";
 import Link from "next/link";
 import CommentsSectionContainer from "@/components/comments";
 import { DAYS } from "@/constants/days";
+import { formatearMonto } from "@/utils/fuctions";
 
 const ENDPOINT = {
   MOV: "https://app.movexlogistica.com/api/v1/packages/pdf/guide?guideNumber=",
@@ -60,8 +61,10 @@ const CSRRouteTable = ({
 
         <tbody className="bg-white divide-y divide-gray-100">
           {routes.map((route: any, index: number) => {
-            const relatedItem = itemsById.get(route.phone);
-            console.log(relatedItem)
+            const relatedItem =   itemsById.get(route.phone);
+            const res     =   route?.json_box_and_guide?.find((s:any)=>{return s.paymnent>=0})
+            //const res2     =   route?.json_box_and_guide?.find((s:any)=>{return s.deposit>=0})
+            //console.log(res,res2)
             return (
               <tr key={route.order} className="hover:bg-gray-50 transition">
                 <td className="px-5 py-4 align-top">
@@ -76,6 +79,8 @@ const CSRRouteTable = ({
                       <p><b>Dirección IA:</b> {route.address}</p>
                       <p><b>Guía:</b> {relatedItem.guide}</p>
                       <p><b>Nombre:</b> {relatedItem.name || "No disponible"}</p>
+                      <p><b>Cobrar:</b> {formatearMonto(res.paymnent)}</p>
+                      <p><b>Depósito:</b> {formatearMonto(res.deposit)}</p>
                       <p><b>Teléfono:</b> {relatedItem.phone}</p>
                       <p>
                         <b>Status:</b>{" "}
