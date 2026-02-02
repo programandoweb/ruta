@@ -14,6 +14,7 @@ use Intervention\Image\Drivers\Imagick\Driver;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 
+ini_set('memory_limit', '256M');
 
 class MultimediaController extends Controller
 {
@@ -34,7 +35,7 @@ class MultimediaController extends Controller
             
             // Definir reglas de validación para los archivos
             $rules = [
-                'doc' => 'required|file|max:2048', // ajusta el tamaño máximo según tus necesidades
+                'doc' => 'required|file|max:12048', // ajusta el tamaño máximo según tus necesidades
             ];
 
             // Mensajes personalizados para las reglas de validación
@@ -84,7 +85,7 @@ class MultimediaController extends Controller
 
         // Definir reglas de validación para los archivos
         $rules = [
-            'doc' => 'required|file|max:2048', // ajusta el tamaño máximo según tus necesidades
+            'doc' => 'required|file|max:12048', // ajusta el tamaño máximo según tus necesidades
         ];
 
         // Mensajes personalizados para las reglas de validación
@@ -123,7 +124,7 @@ class MultimediaController extends Controller
         try {
             // Validar la solicitud
             $request->validate([
-                'doc' => 'required|image|mimes:webp,jpeg,png,jpg,gif|max:2048', // ajusta las reglas según tus necesidades
+                'doc' => 'required|image|mimes:webp,jpeg,png,jpg,gif|max:22048', // ajusta las reglas según tus necesidades
             ]);
 
             $ruta_base = "images/uploads/multimedia/";
@@ -193,7 +194,8 @@ class MultimediaController extends Controller
             ];
         } catch (\Throwable $th) {
             // Manejo de errores
-            return response()->error($th->getMessage(), $th->getCode());
+            throw $th;
+            //return response()->error($th->getMessage(), $th->getCode());
         }
     }
 
@@ -251,7 +253,7 @@ class MultimediaController extends Controller
 
             // Definir reglas de validación para los archivos
             $rules = [
-                'doc' => 'required|file|max:2048', // ajusta el tamaño máximo según tus necesidades
+                'doc' => 'required|file|max:22048', // ajusta el tamaño máximo según tus necesidades
             ];
 
             // Mensajes personalizados para las reglas de validación
