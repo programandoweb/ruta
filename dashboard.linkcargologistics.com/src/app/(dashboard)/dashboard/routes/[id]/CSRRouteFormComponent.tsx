@@ -24,7 +24,8 @@ import { FiCopy, FiSend } from "react-icons/fi";
 
 
 
-const prefixed = "route";
+const prefixed  =   "route";
+const endpoints =   process.env.NEXT_PUBLIC_REMOTE_SYSTEMS
 
 const CSRRouteFormComponent: React.FC<any> = () => {
   const formData = useFormData(false, false, false);
@@ -47,6 +48,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [drivers, setDrivers] = useState<any>([]);
   const [prompt, setPrompt]   = useState<string|undefined>("");
+  const [remote, setRemote]   = useState<any>([]);
 
   const [manualIa, setManualIa] = useState<string>("");
   const [processingIa, setProcessingIa] = useState<boolean>(false);
@@ -155,8 +157,86 @@ const CSRRouteFormComponent: React.FC<any> = () => {
     //getInit();
   };
 
+  useEffect(() => {
+      if (!endpoints || !inputs?.id) return;
 
-  //console.log(prompt)
+      const fetchDeliveryBox = async () => {
+          try {
+              const res = await fetch(
+                  `${endpoints}/delivery_box/${inputs.id}`,
+                  {
+                      method: 'GET',
+                      headers: {
+                          'Content-Type': 'application/json',                          
+                      },
+                  }
+              );
+
+              const json = await res.json();
+
+              if (!res.ok) {
+                  console.error(json);
+                  return;
+              }
+              
+              if (json?.data) {
+                const rows: any[] = [];
+
+                json.data.forEach((pkg: any) => {
+                  // Solo guías que terminen en MOV
+                  if (!pkg?.guideNumber?.toLowerCase().includes("m")) return;
+
+                  const baseGuide = pkg.guideNumber; // ej: ECM91R1J393
+                  const prefix = baseGuide.substring(0, 2); // EC
+                  const rest = baseGuide.substring(2);      // M91R1J393
+
+                  const itemsConcat: string[] = [];
+
+                  pkg.items?.forEach((it: any, index: number) => {
+                    const key = index + 1; // para diferenciar guías
+                    const size = it.size;  // 18x18x18
+                    const company = "MOV";
+                    const guide =
+                      `${prefix}${rest.substring(0, 1)}${rest.substring(1)}_${size}${key}_${company}`;
+
+                    itemsConcat.push(guide);
+                  });
+
+                  
+
+                  rows.push({
+                    ...pkg,
+                    guide_items: itemsConcat.join(","),                 // Col 1
+                    name_sender: pkg.company?.name ?? "",               // Col 2
+                    phone_sender: pkg.company?.celular ?? "",            // Col 3
+                    address:
+                      pkg.sender_location?.sender_formatted_address ??
+                      "",                                                // Col 4
+                    type: "pickup",                                     // Col 5
+                    status: "",                                         // Col 6
+                    payment: "",                                        // Col 7
+                    cost: pkg.cost ?? "",                               // Col 8
+                    deposit: pkg.deposit ?? "",                         // Col 9
+                    comment: pkg.description ?? "",                     // Col 10
+                    day: pkg.sender_location?.pickup_day ?? "",         // Col 11
+                  });
+                });
+
+                setRemote(rows);
+              }
+
+              
+              
+          } catch (error) {
+              console.error(error);
+          }
+      };
+
+      fetchDeliveryBox();
+
+  }, [inputs?.id]);
+
+  console.log(remote)
 
   return (
     <div className="mt-5 grid h-full grid-cols-1 gap-5">
@@ -237,9 +317,9 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                     Cargando rutas...
                   </div>
                 ) : (
-                  <CSRRouteImportComponent loading={loading} getInit={getInit} formData={formData}  routes={routes} inputs={inputs}  items={items} setItems={setItems} />
+                  <CSRRouteImportComponent remote={remote} loading={loading} getInit={getInit} formData={formData}  routes={routes} inputs={inputs}  items={items} setItems={setItems} />
                 )}
-                <RouteFormActions />
+                
               </Fragment>
             )}
           </div>
