@@ -1,10 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Card from "@/components/card";
 import RouteMap from "@/components/RouteMap/RouteMap";
 import RouteListColumn from "./RouteListColumn";
 import ItemsListColumn from "./ItemsListColumn";
+
+
+const test={
+	"data": {
+		"routes": [
+			{
+				"order": 1,
+				"address": "8278 Meadowhaven Dr, Sacramento, CA 95828",
+				"lat": 38.4597488,
+				"lng": -121.4002999,
+				"guideNumber": "ECM40D7C253",
+				"cajas": [
+					"24x24x24",
+					"18x18x27"
+				],
+				"type": "pickup",
+				"phone_sender": "654645645",
+				"pickup_day": 1,
+				"deposit": 0,
+				"cost": 0,
+				"guide_items": "ECM40D7C253_24x24x241_MOV,ECM40D7C253_18x18x272_MOV"
+			},
+			{
+				"order": 2,
+				"address": "251 Bonnie Dr, San Pablo, CA 94806",
+				"lat": 37.9982506,
+				"lng": -122.3293203,
+				"guideNumber": "ECM65G0P245",
+				"cajas": [
+					"16x16x16",
+					"16x16x16 promo"
+				],
+				"type": "pickup",
+				"phone_sender": "7776676",
+				"pickup_day": 2,
+				"deposit": 30,
+				"cost": 310,
+				"guide_items": "ECM65G0P245_16x16x161_MOV,ECM65G0P245_16x16x16 promo2_MOV"
+			},
+			{
+				"order": 3,
+				"address": "1510 Silverstone Pl, San Jose, CA 95122",
+				"lat": 37.3438696,
+				"lng": -121.8239905,
+				"guideNumber": "ECM39J7C355",
+				"cajas": [
+					"18x18x27",
+					"16x16x16",
+					"14x14x14 Gratis"
+				],
+				"type": "pickup",
+				"phone_sender": "876867867867",
+				"pickup_day": 1,
+				"deposit": 30,
+				"cost": 310,
+				"guide_items": "ECM39J7C355_18x18x271_MOV,ECM39J7C355_16x16x162_MOV,ECM39J7C355_14x14x14 Gratis3_MOV"
+			}
+		],
+		"prompt_used": "Actúa como experto en logística. Ordena estas paradas intermedias de forma eficiente.\nINICIO: QH9R+P9, Roseville, CA 95747, Estados Unidos | DESTINO: 8861 Houghton Rd, Bakersfield, CA 93311, Estados Unidos\nREGLAS OBLIGATORIAS:\n1. Devuelve EXCLUSIVAMENTE un JSON válido (un array de objetos).\n2. No incluyas el punto de Inicio ni el de Destino dentro del JSON.\n3. No modifiques el texto de las direcciones, nombres o números telefónicos.\n4. Mantén TODOS los campos técnicos (guideNumber, cajas, phone_sender, etc.) asociados a cada dirección.\nFORMATO DE RESPUESTA REQUERIDO:\n[\n  {\n    \"order\": 1,\n    \"address\": \"...\",\n    \"lat\": 0.0,\n    \"lng\": 0.0,\n    \"guideNumber\": \"...\",\n    \"cajas\": [...],\n    \"type\": \"...\",\n    \"phone_sender\": \"...\",\n    \"pickup_day\": 0,\n    \"deposit\": 0,\n    \"cost\": 0\n  }\n]\nPARADAS:\n1) - 251 Bonnie Dr, San Pablo, CA 94806 | guideNumber: ECM65G0P245 | cajas: [\"16x16x16\",\"16x16x16 promo\"] | type: pickup | phone_sender: 7776676 | address: 251 Bonnie Dr, San Pablo, CA 94806 | pickup_day: 2 | deposit: 30 | cost: 310 | Lat: 37.9982506 | Lng: -122.3293203\n2) - 8278 Meadowhaven Dr, Sacramento, CA 95828 | guideNumber: ECM40D7C253 | cajas: [\"24x24x24\",\"18x18x27\"] | type: pickup | phone_sender: 654645645 | address: 8278 Meadowhaven Dr, Sacramento, CA 95828 | pickup_day: 1 | deposit: 0 | cost: 0 | Lat: 38.4597488 | Lng: -121.4002999\n3) - 1510 Silverstone Pl, San Jose, CA 95122 | guideNumber: ECM39J7C355 | cajas: [\"18x18x27\",\"16x16x16\",\"14x14x14 Gratis\"] | type: pickup | phone_sender: 876867867867 | address: 1510 Silverstone Pl, San Jose, CA 95122 | pickup_day: 1 | deposit: 30 | cost: 310 | Lat: 37.3438696 | Lng: -121.8239905\n"
+	}
+}
 
 interface RouteItem {
   order: number;
@@ -23,25 +84,25 @@ interface Props {
   inputs?: any;
   loading?: boolean;
   remote?: any[];
+  setInputs?:any;
+  cache_json?:any;
 }
 
 const CSRRouteImportComponent: React.FC<Props> = ({
   items,
-  setItems,
+  setInputs,
   routes: initialRoutes,
   formData,
   loading,
   remote = [],
+  cache_json
 }) => {
   const [routes, setRoutes] = useState<RouteItem[]>(initialRoutes);
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
+  const [reorder, setReorder] = useState<number[]>([]);
 
-  const toggleExpand = (idx: number) => {
-    setExpandedItems((prev) =>
-      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
-    );
-  };
+  
 
   const toggleSelect = (idx: number) => {
     setSelected((prev) =>
@@ -49,18 +110,76 @@ const CSRRouteImportComponent: React.FC<Props> = ({
     );
   };
 
+  const resolvedata = (res:any)=>{
+    console.log(res)
+    if(!res?.map)return;
+    const sanitizedRoutes = res.map((iaItem: any) => {
+      const originalData  = remote.find(r => r.guideNumber === iaItem.guideNumber) || {};
+        return {
+          ...iaItem,
+          // MJ o cualquier propiedad minificada suele fallar aquí si iaItem es null
+          name: iaItem.name || originalData.name_sender || "Sin nombre",
+          phone: iaItem.phone_sender || originalData.phone_sender || "N/A",
+          origin_address: iaItem.address || originalData.address || "", // address es lo que devuelve Gemini
+          observation: originalData.description || "",
+          day: iaItem.pickup_day || originalData.day || 1,
+          status: "Agendado",
+          type: iaItem.type || originalData.type || "pickup",
+          lat: parseFloat(iaItem.lat || 0),
+          lng: parseFloat(iaItem.lng || 0),
+        };
+    })
+    setReorder(sanitizedRoutes)
+    setRoutes(sanitizedRoutes)
+    setInputs((prevFormData:any) => ({
+      ...prevFormData,
+      cache_json: sanitizedRoutes,
+    }));    
+  }
+
+  useEffect(()=>{
+    if(cache_json){
+      setReorder(cache_json)
+      setRoutes(cache_json)
+      setInputs((prevFormData:any) => ({
+        ...prevFormData,
+        cache_json: cache_json,
+      }));
+    }
+  },[cache_json])
+
   const sendSelectedToBackend = async () => {
-    const payload = remote.filter((_: any, idx: number) =>
-      selected.includes(idx)
-    );
+      const payload = remote.filter((_: any, idx: number) =>
+          selected.includes(idx)
+      );
 
-    if (!payload.length) return;
+      if (!payload.length) return;
+      //return resolvedata(test?.data?.routes)
+      
 
-    await formData.handleRequest(
-      formData.backend + window.location.pathname + "/import",
-      "post",
-      { packages: payload }
-    );
+      await formData.handleRequest(
+          formData.backend + window.location.pathname + "/import",
+          "post",
+          { packages: payload }
+      ).then((res: any) => {
+          // Verificamos que la respuesta sea exitosa y contenga las rutas optimizadas
+          if (res && res.routes) {
+              console.log("Ruta optimizada recibida:", res.routes);
+              console.log(res.routes)
+              if(res.routes){
+                return resolvedata(res.routes)
+              }
+              // Llenamos el estado con el dataset ordenado que devolvió Gemini
+              setReorder(res.routes);
+              
+              // Opcional: Si necesitas hacer algo más con el prompt usado
+              // console.log("Prompt usado:", res.data.prompt_used);
+          } else {
+              console.warn("La respuesta no tiene el formato esperado:", res);
+          }
+      }).catch((err: any) => {
+          console.error("Error al importar y optimizar:", err);
+      });
   };
 
   const handleReorder = (updatedRoutes: RouteItem[]) => {
@@ -73,6 +192,8 @@ const CSRRouteImportComponent: React.FC<Props> = ({
       { routes: updatedRoutes }
     );
   };
+
+  //console.log(reorder)
 
   return (
     <div className="mt-5">
@@ -206,21 +327,26 @@ const CSRRouteImportComponent: React.FC<Props> = ({
         </div>
       </Card>
 
-      <div className="mt-8 grid h-full md:grid-cols-3 gap-8">
-        <ItemsListColumn
-          items={items}
-          expandedItems={expandedItems}
-          toggleExpand={toggleExpand}
-          handleDelete={(idx) =>
-            setItems((prev) => prev.filter((_, i) => i !== idx))
-          }
-          setItems={setItems}
-        />
+      <div className="mt-8 grid h-full md:grid-cols-2 gap-8">
+        {
+          /*
+            <ItemsListColumn
+              items={items}
+              expandedItems={expandedItems}
+              toggleExpand={toggleExpand}
+              handleDelete={(idx) =>
+                setItems((prev) => prev.filter((_, i) => i !== idx))
+              }
+              setItems={setItems}
+            />  
+          */
+        }
+        
 
-        {!loading && routes.length > 0 && (
+        {!loading && reorder.length > 0 && (
           <RouteListColumn
             id={formData.id}
-            routes={routes}
+            routes={reorder}
             items={items}
             openGoogleMaps={() => {}}
             getBorderColor={() => ""}

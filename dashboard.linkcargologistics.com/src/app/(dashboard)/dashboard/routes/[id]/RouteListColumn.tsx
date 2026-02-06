@@ -20,7 +20,7 @@ interface GuideItem {
 
 interface Props {
   id: string;
-  routes: RouteItem[];
+  routes: any[];
   items: any[];
   openGoogleMaps: (lat: number, lng: number) => void;
   getBorderColor: (status: string) => string;
@@ -95,14 +95,7 @@ const RouteListColumn: React.FC<Props> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">Ruta a seguir</h2>
-        <button
-          type="button"
-          onClick={handleSendGuide}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          <FaSave /> Guardar guías
-        </button>
+        <h2 className="text-2xl font-bold text-gray-800">Ruta a seguir</h2>        
       </div>
 
       {localRoutes.length > 0 ? (

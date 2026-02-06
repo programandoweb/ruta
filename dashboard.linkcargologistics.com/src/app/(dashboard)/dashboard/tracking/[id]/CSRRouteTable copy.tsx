@@ -61,12 +61,9 @@ const CSRRouteTable = ({
 
         <tbody className="bg-white divide-y divide-gray-100">
           {routes.map((route: any, index: number) => {
-            
-            const relatedItem   =   itemsById.get(route.phone);
-            const status        =   relatedItem?.json_status??{}
-            //const res         =   route?.json_box_and_guide?.find((s:any)=>{return s.paymnent>=0})
-            //const res2      =   route?.json_box_and_guide?.find((s:any)=>{return s.deposit>=0})
-            //console.log(relatedItem?.json_status,route)
+            const relatedItem =   itemsById.get(route.phone);
+            const res     =   route?.json_box_and_guide?.find((s:any)=>{return s.paymnent>=0})
+            //const res2     =   route?.json_box_and_guide?.find((s:any)=>{return s.deposit>=0})
             //console.log(res,res2)
             return (
               <tr key={route.order} className="hover:bg-gray-50 transition">
@@ -82,8 +79,8 @@ const CSRRouteTable = ({
                       <p><b>Dirección IA:</b> {route.address}</p>
                       <p><b>Guía:</b> {relatedItem.guide}</p>
                       <p><b>Nombre:</b> {relatedItem.name || "No disponible"}</p>
-                      <p><b>Cobrar:</b> {formatearMonto(route.cost)}</p>
-                      <p><b>Depósito:</b> {formatearMonto(route.deposit)}</p>
+                      <p><b>Cobrar:</b> {/*formatearMonto(res.paymnent)*/}</p>
+                      <p><b>Depósito:</b> {/*formatearMonto(res.deposit)*/}</p>
                       <p><b>Teléfono:</b> {relatedItem.phone}</p>
                       <p>
                         <b>Status:</b>{" "}
@@ -109,29 +106,29 @@ const CSRRouteTable = ({
                 </td>
 
                 <td className="px-5 py-4 align-top space-y-3">
-                  {route?.cajas?.map((row: any, k: number) => {                    
-                    //const current =   data?.items?.find((s:any)=>{return s.})
-                    //console.log(data?.items[k],row)
-                    const currentStatus   =   status[row]??"Borrador"
-                    const service         =   "MOV"
+                  {
+                    console.log(route)
+                  }
+                  {route?.json_box_and_guide?.map((row: any, k: number) => {
+                    const service = row?.service as ServiceKey | undefined;
+
                     return (
                       <div
                         key={k}
                         className="flex flex-wrap items-center justify-between gap-3 border rounded-lg p-3 bg-gray-50"
                       >
                         <div className="text-xs font-semibold text-gray-700">
-                          {relatedItem.guide}
+                          {row.guide}
                           <span className="text-gray-400 mx-1">|</span>
-                          {row}
-                          <span className="text-gray-400 mx-1">|</span>
-                          {
-                            currentStatus
-                          }
-                          
+                          {row.box}
+                          <span className="ml-2 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                            {row.status}
+                          </span>
                         </div>
+
                         <div className="flex items-center gap-3">
                           <BasicBtnUpload
-                            name={"evidence_" + relatedItem.guide + row}
+                            name={"evidence_" + row.guide + row.box}
                             keys={JSON.stringify({
                               order: data?.id,
                               lat: route?.lat,
@@ -142,14 +139,14 @@ const CSRRouteTable = ({
                             setFormData={setInputs}
                           />
 
-                          {currentStatus === "Borrador" ? (
+                          {row.status === "Borrador" ? (
                             <>
                               <Link
                                 target="_blank"
                                 title="PDF"
                                 href={
                                   service
-                                    ? `${ENDPOINT[service]}${relatedItem.guide}`
+                                    ? `${ENDPOINT[service]}${row.guide}`
                                     : "#"
                                 }
                                 className="text-red-600 hover:text-red-800"
@@ -205,8 +202,6 @@ const CSRRouteTable = ({
                             </Fragment>
                           )}
                         </div>
-                        
-                        
                         
                       </div>
                     );

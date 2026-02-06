@@ -36,6 +36,53 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const [routes, setRoutes]   = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
+
+  const getInit = () => {
+    setLoading(true);
+    formData
+      .handleRequest(formData.backend + location.pathname)
+      .then((response: any) => {
+        const data = response[prefixed];
+        if (!data) return;
+
+        setInputs(data);
+
+        // --- SANEAMIENTO CRÍTICO ---
+        if (data.cache_json && data.items) {
+          // 1. Decodificar si viene como string
+          const rawRoutes = typeof data.cache_json === 'string' 
+            ? JSON.parse(data.cache_json) 
+            : data.cache_json;
+
+          // 2. Mapear para asegurar compatibilidad con CSRRouteTableComponent
+          const sanitizedRoutes = rawRoutes.map((route: any) => {
+            // Buscamos el item real en la DB por dirección u orden
+            const dbMatch = data.items.find((it: any) => 
+               it.origin_address === (route.address || route.origin_address)
+            );
+
+            return {
+              ...route,
+              // Forzamos el ID real de la base de datos para que handleAccept funcione
+              id: dbMatch?.id || route.id, 
+              // Aseguramos que existan campos que los componentes hijos piden
+              address: route.address || route.origin_address,
+              phone: route.phone || route.phone_sender,
+              status: dbMatch?.status || route.status || 'Agendado'
+            };
+          });
+
+          setRoutes(sanitizedRoutes);
+        }
+        
+        if (data.items) {
+          setItems(data.items);
+        }
+      })
+      .finally(() => setLoading(false));
+  };
+
+  /*
   const getInit = () => {
     setLoading(true);
     formData
@@ -44,9 +91,10 @@ const CSRRouteFormComponent: React.FC<any> = () => {
         if (response && response[prefixed]) {
           setInputs(response[prefixed]);
         }
-        if (response && response.dataset) {
-          //console.log(response.dataset)
-          setRoutes(response.dataset);
+        console.log(response[prefixed]?.cache_json)
+        if (response && response[prefixed]?.cache_json) {
+          console.log(response[prefixed]?.cache_json)
+          //setRoutes(response[prefixed]?.cache_json);
         }
         if (response && response[prefixed] && response[prefixed].items) {
           setItems(response[prefixed].items);
@@ -54,6 +102,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
       })
       .finally(() => setLoading(false));
   };
+  */
 
   useEffect(getInit, []);
 
@@ -61,6 +110,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   if(loading){
     return <div className="mt-5 grid h-full grid-cols-1 gap-5">Esperando por la IA...</div>
   }
+
+  console.log(routes)
 
   return (
     <div className="mt-5 grid h-full grid-cols-1 gap-5">

@@ -18,7 +18,6 @@ import { MdSwapHoriz } from "react-icons/md";
 
 import RouteFormHeader from "./RouteFormHeader";
 import RouteFormFields from "./RouteFormFields";
-import RouteFormActions from "./RouteFormActions";
 import CSRRouteImportComponent from "./CSRRouteImportComponent";
 import { FiCopy, FiSend } from "react-icons/fi";
 
@@ -52,7 +51,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
   const [manualIa, setManualIa] = useState<string>("");
   const [processingIa, setProcessingIa] = useState<boolean>(false);
-
+  const [cache_json, set_cache_json]   = useState<any>(null);
   
 
   const getInit = () => {
@@ -71,6 +70,9 @@ const CSRRouteFormComponent: React.FC<any> = () => {
           setPrompt(response?.[prefixed]?.prompt);
         }
 
+        if(response?.route){
+          set_cache_json(response?.route?.cache_json)          
+        }
 
         if (response && response.dataset) {
           setRoutes(response.dataset);
@@ -132,7 +134,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
   useEffect(()=>{
     if(items.length>0 && routes.length===0){
-      requestIa()
+      //requestIa()
       return;
     }
   },[items])
@@ -236,7 +238,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
   }, [inputs?.id]);
 
-  console.log(remote)
+  //console.log(remote)
 
   return (
     <div className="mt-5 grid h-full grid-cols-1 gap-5">
@@ -317,7 +319,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                     Cargando rutas...
                   </div>
                 ) : (
-                  <CSRRouteImportComponent remote={remote} loading={loading} getInit={getInit} formData={formData}  routes={routes} inputs={inputs}  items={items} setItems={setItems} />
+                  <CSRRouteImportComponent cache_json={cache_json} remote={remote} loading={loading} getInit={getInit} formData={formData}  routes={routes} inputs={inputs} setInputs={setInputs}  items={items} setItems={setItems} />
                 )}
                 
               </Fragment>

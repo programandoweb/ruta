@@ -37,6 +37,8 @@ Route::prefix('dashboard/routes')->group(function () {
 
     Route::post('/{id}/iaManual', [RoutesController::class, 'setIaManual']);
 
+    Route::post('/{id}/import', [RoutesController::class, 'setIaManualImport']);
+
     // 👇 rutas específicas sobre una ruta existente
     Route::post('/{id}/set-status-address', [RoutesController::class, 'setStatusAddress']);
     Route::put('/{id}/reorder', [RoutesController::class, 'reorder']); // ✅ nueva
