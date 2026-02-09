@@ -1507,9 +1507,20 @@ EOT;
             //p($route);
 
             if(empty($route->cache_json)){
+
+
+                $extra = [];
+                if (auth()->user()->hasRole('admin')) {
+                    $drivers = \App\Models\User::whereHas('roles', function ($q) {
+                        $q->where('name', 'employees');
+                    })->get();
+                    $extra['drivers'] = $drivers;
+                }    
                 return response()->success(array_merge([
-                    'route' => $route,                    
-                ]), 'Hoja de ruta obtenida correctamente 2026. Agua');
+                    'route' => $route, 
+                                       
+                ],$extra), 'Hoja de ruta obtenida correctamente 2026. Agua');
+                
                 return $this->getItemsAll($route);
             }else{
                 $route->ia_status = 'completed';

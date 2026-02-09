@@ -62,8 +62,15 @@ const CSRRouteFormComponent: React.FC<any> = () => {
       .handleRequest(formData.backend + location.pathname)
       .then((response: any) => {
         if (response && response[prefixed]) {
-          setInputs(response[prefixed]);
+          setInputs((prev: any) => ({
+            ...prev,
+            ...response[prefixed],
+            date: response[prefixed]?.date
+              ? response[prefixed].date.split('T')[0]
+              : prev.date,
+          }));
         }
+
         /*
         if (response && response?.prompt) {
           setPrompt(response?.prompt);

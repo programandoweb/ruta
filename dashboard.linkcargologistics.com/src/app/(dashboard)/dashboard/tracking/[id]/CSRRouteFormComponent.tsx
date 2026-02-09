@@ -51,6 +51,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
         // --- SANEAMIENTO CRÍTICO ---
         if (data.cache_json && data.items) {
+
+          console.log(1)
           // 1. Decodificar si viene como string
           const rawRoutes = typeof data.cache_json === 'string' 
             ? JSON.parse(data.cache_json) 
