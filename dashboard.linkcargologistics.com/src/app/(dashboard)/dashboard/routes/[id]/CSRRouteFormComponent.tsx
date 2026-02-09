@@ -64,11 +64,13 @@ const CSRRouteFormComponent: React.FC<any> = () => {
         if (response && response[prefixed]) {
           setInputs(response[prefixed]);
         }
+        /*
         if (response && response?.prompt) {
           setPrompt(response?.prompt);
         }else{
           setPrompt(response?.[prefixed]?.prompt);
         }
+        */
 
         if(response?.route){
           set_cache_json(response?.route?.cache_json)          
@@ -145,6 +147,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
 
   const submitIaManual = async () => {
+    return false;
     if (!manualIa.trim()) return;
 
     setProcessingIa(true);
@@ -332,7 +335,9 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                     Cargando rutas...
                   </div>
                 ) : (
-                  <CSRRouteImportComponent cache_json={cache_json} remote={remote} loading={loading} getInit={getInit} formData={formData}  routes={routes} inputs={inputs} setInputs={setInputs}  items={items} setItems={setItems} />
+                  <Fragment>
+                    <CSRRouteImportComponent cache_json={cache_json} remote={remote} loading={loading} getInit={getInit} formData={formData}  routes={routes} inputs={inputs} setInputs={setInputs}  items={items} setItems={setItems} />
+                  </Fragment>
                 )}
                 
               </Fragment>

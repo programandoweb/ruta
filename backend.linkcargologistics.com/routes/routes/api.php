@@ -35,7 +35,7 @@ Route::prefix('dashboard/routes')->group(function () {
     Route::put('/{id}', [RoutesController::class, 'update']);
     Route::delete('/{id}', [RoutesController::class, 'destroy']);
 
-    Route::post('/{id}/iaManual', [RoutesController::class, 'setIaManual']);
+    Route::post('/{id}/iaManualV2', [RoutesController::class, 'setIaManualV2']);
 
     Route::post('/{id}/import', [RoutesController::class, 'setIaManualImport']);
 

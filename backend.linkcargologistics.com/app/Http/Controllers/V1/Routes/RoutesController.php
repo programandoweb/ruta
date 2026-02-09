@@ -1924,6 +1924,107 @@ EOT;
      * Actualizar una ruta existente con sus items y persistir el cache de la IA
      */
     public function update(Request $request, string $id)
+{
+    DB::beginTransaction();
+
+    try {
+        $validated = $request->validate([
+            'cache_json'            => 'nullable|array',
+            'ia_status'             => 'nullable|string',
+            'name'                  => 'nullable|string|max:255',
+            'phone'                 => 'required|string|max:20',
+            'origin_address'        => 'required|string|max:255',
+            'destination_address'   => 'nullable|string|max:255',
+            'type'                  => 'required|in:deliver,pickup',
+            'date'                  => 'nullable|date',
+        ]);
+
+        $route = Routes::findOrFail($id);
+
+        /* =========================================================
+           1. Datos maestros
+        ========================================================= */
+        $cacheData = $request->input('cache_json');
+
+        if (is_array($cacheData)) {
+            $route->cache_json = json_encode($cacheData, JSON_UNESCAPED_UNICODE);
+        }
+
+        $route->fill($validated);
+        $route->ia_status = $request->input('ia_status', 'completed');
+        $route->save();
+
+        /* =========================================================
+           2. Items y asignaciones
+        ========================================================= */
+        if (is_array($cacheData) && count($cacheData) > 0) {
+
+            \App\Models\RouteItem::where('route_id', $route->id)->delete();
+            \App\Models\RouteAssignment::where('route_id', $route->id)->delete();
+
+            foreach ($cacheData as $row) {
+
+                $guideBase = $row['guideNumber'] ?? ($row['guide'] ?? null);
+
+                \App\Models\RouteItem::create([
+                    'route_id'            => $route->id,
+                    'guide'               => $guideBase,
+                    'json_dataset'        => json_encode($row, JSON_UNESCAPED_UNICODE),
+                    'name'                => $row['name'] ?? 'Movex Cliente',
+                    'phone'               => $row['phone'] ?? ($row['phone_sender'] ?? null),
+                    'origin_address'      => $row['address'] ?? ($row['origin_address'] ?? null),
+                    'destination_address' => $row['destination_address'] ?? null,
+                    'observation'         => $row['observation'] ?? '',
+                    'type'                => $row['type'] ?? 'pickup',
+                    'status'              => $row['status'] ?? 'Agendado',
+                    'lat'                 => isset($row['lat']) ? (float) $row['lat'] : null,
+                    'lng'                 => isset($row['lng']) ? (float) $row['lng'] : null,
+                    'day'                 => $row['day'] ?? ($row['pickup_day'] ?? 1),
+                    'guide_remote'        => $row['guide_items'] ?? null,
+                ]);
+
+                if ($guideBase && !empty($row['guide_items'])) {
+                    $guides2 = explode(',', $row['guide_items']);
+
+                    foreach ($guides2 as $guide2) {
+                        \App\Models\RouteAssignment::updateOrCreate(
+                            [
+                                'route_id' => $route->id,
+                                'guide'    => $guideBase,
+                                'guide2'   => trim($guide2),
+                            ],
+                            [
+                                'route_id' => $route->id,
+                                'guide'    => $guideBase,
+                                'guide2'   => trim($guide2),
+                            ]
+                        );
+                    }
+                }
+            }
+        }
+
+        DB::commit();
+
+        $route->load('items');
+
+        return response()->success(
+            compact('route'),
+            'Ruta, Items y Asignaciones actualizadas correctamente.'
+        );
+
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        \Log::error('RouteUpdate error: ' . $e->getMessage());
+
+        return response()->error(
+            'No se pudo guardar: ' . $e->getMessage(),
+            500
+        );
+    }
+}
+
+    public function updateXXXX(Request $request, string $id)
     {
         DB::beginTransaction();
         try {
@@ -2316,6 +2417,39 @@ EOT;
         }
     }
 
+    
+    public function setIaManualV2(Request $request, string $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'prompt'   => 'required|string',
+            'manualIa'=> 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->error($validator->errors()->first(), 422);
+        }
+
+        $route = Routes::with('items')->findOrFail($id);
+
+        $decodedManualIa = json_decode($request->input('manualIa'), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return response()->error('manualIa no es un JSON válido', 422);
+        }
+
+        $route->update([
+            'prompt'     => $request->input('prompt'),
+            'cache_json' => $decodedManualIa,
+        ]);
+
+        return response()->success(
+            $route->only(['id', 'prompt', 'cache_json']),
+            'IA manual actualizada'
+        );
+    }
+
+
+
     public function setIaManual(Request $request, string $id)
     {
         $validator = Validator::make($request->all(), [
@@ -2572,6 +2706,11 @@ EOT;
                     $pickupDay = null;
                 }
 
+                if($formattedAddr=='Sin dirección'){
+                    $formattedAddr=$value["output_address"];
+                    //p($value["output_address"]);
+                }
+
                 $addressList .= ($index + 1) . ") - {$formattedAddr}"
                     . " | guideNumber: {$guideNumber}"
                     . " | cajas: " . json_encode($cajas)
@@ -2608,6 +2747,25 @@ EOT;
                 ];
             }
 
+            $prompt = <<<EOT
+            Actúa como experto en logística. Ordena estas paradas de forma eficiente de Roseville a Bakersfield.
+            INICIO: {$origin} | DESTINO: {$destination}
+
+            REGLAS:
+            - Devuelve EXCLUSIVAMENTE un JSON (array de objetos).
+            - No incluyas Inicio ni Destino en el JSON.
+            - Mantén guideNumber, cajas y phone_sender intactos.
+            - SI lat o lng vienen en 0, null o no existen, DEBES geolocalizar la dirección y devolver lat y lng correctos.
+            - NO devuelvas lat/lng en cero si la dirección es válida.
+
+
+            FORMATO:
+            [{"order":1,"address":"...","lat":0,"lng":0,"guideNumber":"...","cajas":[],"phone_sender":"...","pickup_day":1,"delivery_day":1}]
+
+            PARADAS:
+            {$addressList}
+            EOT;
+
             /**
              * ==========================
              * 🔒 CACHE: si existe, usarlo
@@ -2617,21 +2775,7 @@ EOT;
                 $optimizedDataset = Cache::get($cacheKey);
             } else {
 
-                $prompt = <<<EOT
-    Actúa como experto en logística. Ordena estas paradas de forma eficiente de Roseville a Bakersfield.
-    INICIO: {$origin} | DESTINO: {$destination}
-
-    REGLAS:
-    - Devuelve EXCLUSIVAMENTE un JSON (array de objetos).
-    - No incluyas Inicio ni Destino en el JSON.
-    - Mantén guideNumber, cajas y phone_sender intactos.
-
-    FORMATO:
-    [{"order":1,"address":"...","lat":0,"lng":0,"guideNumber":"...","cajas":[],"phone_sender":"...","pickup_day":1,"delivery_day":1}]
-
-    PARADAS:
-    {$addressList}
-    EOT;
+                
 
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->timeout(350)
@@ -2687,7 +2831,7 @@ EOT;
             
 
             return response()->success(
-                ['routes' => $finalRoutes, 'addressList' => $addressList],
+                ['routes' => $finalRoutes, 'addressList' => $addressList,"prompt"=>$prompt],
                 'Ruta optimizada (cacheada).'
             );
 

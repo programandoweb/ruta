@@ -6,6 +6,8 @@ import RouteMap from "@/components/RouteMap/RouteMap";
 import RouteListColumn from "./RouteListColumn";
 import ItemsListColumn from "./ItemsListColumn";
 import { pickup_day } from "@/utils/dataset";
+import Image from "next/image";
+import { FiCopy, FiSend } from "react-icons/fi";
 
 
 const test={
@@ -103,6 +105,13 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   const [selected, setSelected] = useState<number[]>([]);
   const [reorder, setReorder] = useState<number[]>([]);
   const [assignments, setAssignments] = useState<number[]>([]);
+  const [sendRoute, setSendRoute] = useState<boolean>(false);
+  
+
+  const [prompt, setPrompt]   = useState<string|undefined>("");
+
+  const [manualIa, setManualIa] = useState<string>("");  
+  const [processingIa, setProcessingIa] = useState<boolean>(false);
 
   
   //console.log(formData?.dataset?.route?.assignments)
@@ -145,6 +154,13 @@ const CSRRouteImportComponent: React.FC<Props> = ({
     }));    
   }
 
+  useEffect(() => {
+    if (remote?.length) {
+      setSelected(remote.map((_: any, idx: number) => idx));
+    }
+  }, [remote]);
+
+
   useEffect(()=>{
     if(cache_json){
       setReorder(cache_json)
@@ -163,17 +179,22 @@ const CSRRouteImportComponent: React.FC<Props> = ({
 
       if (!payload.length) return;
       //return resolvedata(test?.data?.routes)
-      
+      setSendRoute(true)
 
       await formData.handleRequest(
           formData.backend + window.location.pathname + "/import",
           "post",
           { packages: payload }
       ).then((res: any) => {
+          setSendRoute(false)
+
+          setPrompt(res?.prompt)
           // Verificamos que la respuesta sea exitosa y contenga las rutas optimizadas
           if (res && res.routes) {
               console.log("Ruta optimizada recibida:", res.routes);
               console.log(res.routes)
+
+
               if(res.routes){
                 return resolvedata(res.routes)
               }
@@ -185,8 +206,10 @@ const CSRRouteImportComponent: React.FC<Props> = ({
           } else {
               console.warn("La respuesta no tiene el formato esperado:", res);
           }
+          
       }).catch((err: any) => {
           console.error("Error al importar y optimizar:", err);
+          setSendRoute(false)
       });
   };
 
@@ -201,10 +224,101 @@ const CSRRouteImportComponent: React.FC<Props> = ({
     );
   };
 
-  //console.log(assignments)
+  const submitIaManual = async () => {
+    if (!manualIa.trim()) return;
+
+    setProcessingIa(true);
+
+    await formData.handleRequest(
+      formData.backend + location.pathname + "/iaManualV2",
+      "post",
+      { prompt: prompt, manualIa: manualIa }
+    );
+    //document.location.reload()
+    setProcessingIa(false);
+    //getInit();
+  };
+
+
+  //console.log(sendRoute)
+
+  if (sendRoute) {
+    return (
+      <div className="mt-5 flex items-center justify-center w-full">
+        <Image
+          src="/img/loading3.gif"
+          alt="Loading"
+          width={300}
+          height={400}
+          className="w-40 sm:w-56 md:w-72 h-auto"
+          priority
+        />
+      </div>
+    );
+  }
+
+  
+
 
   return (
     <div className="mt-5">
+
+      {
+        prompt && (
+          <div className="relative text-xs bg-gray-50 border rounded-xl p-4 space-y-4 shadow-inner">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-700">Prompt generado por IA</h3>
+
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(prompt)}
+                className="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition"
+                title="Copiar prompt"
+              >
+                <FiCopy size={14} />
+                <span className="text-[10px]">Copiar</span>
+              </button>
+            </div>
+
+            {/* Prompt */}
+            <pre className="bg-white border rounded-lg p-3 text-[11px] leading-relaxed max-h-60 overflow-auto">
+              {prompt}
+            </pre>
+
+            {/* Entrada manual */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-medium text-gray-600">
+                Pegar resultado IA manual
+              </label>
+
+              <textarea
+                value={manualIa}
+                onChange={(e) => setManualIa(e.target.value)}
+                rows={4}
+                placeholder="Pega aquí el resultado generado por otra IA…"
+                className="w-full text-xs border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={submitIaManual}
+                  disabled={processingIa}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-medium
+                            bg-blue-600 text-white rounded-lg
+                            hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <FiSend size={14} />
+                  {processingIa ? "Procesando…" : "Procesar manualmente"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       <Card className="shadow-lg border border-gray-100 p-4">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
