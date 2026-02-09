@@ -39,6 +39,7 @@ class RouteItem extends Model
         'day',
         'geo_cached_at',
         'guide_remote',
+        'json_dataset'
     ];
 
     protected $casts = [

@@ -7,7 +7,7 @@
  * ---------------------------------------------------
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Card from "@/components/card";
 import CSRRouteTable from "./CSRRouteTable";
 import CSRRouteCardsMobile from "./CSRRouteCardsMobile";
@@ -20,20 +20,28 @@ const CSRRouteTableComponent = ({
   inputs: data,
   getInit,
 }: any) => {
+
   const itemsById = useMemo(
     () => new Map(items.map((item: any) => [item.phone, item])),
     [items]
   );
 
-  const [inputs, setInputs] = useState<any>(null);
+  /**
+   * 🔐 Estado CENTRAL de evidencias (por key)
+   * {
+   *   evidence_GUIDE_SIZE: [url1, url2]
+   * }
+   */
+  const [inputs, setInputs] = useState<{
+    evidences?: Record<string, string[]>;
+  }>({ evidences: {} });
 
   const openGoogleMapsAndNotify = async (route: any) => {
     if (!route?.address) return;
-    const encoded = encodeURIComponent(route.address);
-    window.open(
-      `https://www.google.com/maps/search/?api=1&query=${encoded}`,
-      "_blank"
-    );
+
+    const encodedAddress = encodeURIComponent(route.address);
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    window.open(mapUrl, "_blank");
   };
 
   const handleAccept = (address: string, itemId: number, row: any) => {
@@ -79,6 +87,7 @@ const CSRRouteTableComponent = ({
           routes={routes}
           itemsById={itemsById}
           data={data}
+          inputs={inputs}
           setInputs={setInputs}
           handleAccept={handleAccept}
           handleReject={handleReject}
@@ -92,6 +101,7 @@ const CSRRouteTableComponent = ({
           routes={routes}
           itemsById={itemsById}
           data={data}
+          inputs={inputs}
           setInputs={setInputs}
           handleAccept={handleAccept}
           handleReject={handleReject}

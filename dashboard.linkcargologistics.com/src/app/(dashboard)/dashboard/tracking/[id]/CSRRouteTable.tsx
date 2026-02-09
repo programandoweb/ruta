@@ -66,8 +66,8 @@ const CSRRouteTable = ({
             const status        =   relatedItem?.json_status??{}
             //const res         =   route?.json_box_and_guide?.find((s:any)=>{return s.paymnent>=0})
             //const res2      =   route?.json_box_and_guide?.find((s:any)=>{return s.deposit>=0})
-            //console.log(relatedItem?.json_status,route)
-            //console.log(res,res2)
+            //console.log(route?.delivery_day)
+            //console.log(route?.statuses)
             return (
               <tr key={route.order} className="hover:bg-gray-50 transition">
                 <td className="px-5 py-4 align-top">
@@ -85,12 +85,6 @@ const CSRRouteTable = ({
                       <p><b>Cobrar:</b> {formatearMonto(route.cost)}</p>
                       <p><b>Depósito:</b> {formatearMonto(route.deposit)}</p>
                       <p><b>Teléfono:</b> {relatedItem.phone}</p>
-                      <p>
-                        <b>Status:</b>{" "}
-                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">
-                          {relatedItem.status}
-                        </span>
-                      </p>
                       <p className="">
                         <b>Observación:</b> {relatedItem.observation}
                       </p>
@@ -99,7 +93,7 @@ const CSRRouteTable = ({
                       </p>
                       <p>
                         <b>Acción:</b>{" "}
-                        {relatedItem.type === "pickup"
+                        {!route?.delivery_day 
                           ? "Recoger caja"
                           : "Entregar caja"}
                       </p>
@@ -111,9 +105,22 @@ const CSRRouteTable = ({
                 <td className="px-5 py-4 align-top space-y-3">
                   {route?.cajas?.map((row: any, k: number) => {                    
                     //const current =   data?.items?.find((s:any)=>{return s.})
-                    //console.log(data?.items[k],row)
-                    const currentStatus   =   status[row]??"Borrador"
+                    //console.log(row)
+                    const statusKey = `${relatedItem.guide}_${row}`;
+                    const currentStatus = status?.[statusKey]?.status ?? "Borrador";
                     const service         =   "MOV"
+                    const keys_evidence   =   "evidence_"+relatedItem.guide+row;
+                    
+                    const evidence        =   relatedItem?.evidence_urls && typeof relatedItem.evidence_urls === 'object'
+                      ? relatedItem.evidence_urls[keys_evidence]
+                      : [];
+                    
+
+
+                    //console.log(currentStatus);
+                    //const gallery = [  ...(Array.isArray(evidence) ? evidence : []),  ...(Array.isArray(row?.evidences) ? row.evidences : []),];
+
+
                     return (
                       <div
                         key={k}
@@ -137,25 +144,30 @@ const CSRRouteTable = ({
                               lat: route?.lat,
                               lng: route?.lng,
                             })}
-                            gallery={row?.evidences}
+                            gallery={evidence||row?.evidences}
                             label="Subir evidencia"
                             setFormData={setInputs}
                           />
 
                           {currentStatus === "Borrador" ? (
                             <>
-                              <Link
-                                target="_blank"
-                                title="PDF"
-                                href={
-                                  service
-                                    ? `${ENDPOINT[service]}${relatedItem.guide}`
-                                    : "#"
-                                }
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <FaFilePdf size={18} />
-                              </Link>
+                              {
+                                !route?.delivery_day&&(
+                                  <Link
+                                    target="_blank"
+                                    title="PDF"
+                                    href={
+                                      service
+                                        ? `${ENDPOINT[service]}${relatedItem.guide}`
+                                        : "#"
+                                    }
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <FaFilePdf size={18} />
+                                  </Link>
+                                )
+                              }
+                              
 
                               <button
                                 title="Aceptar"

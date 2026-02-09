@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use App\Jobs\GenerateRouteCacheJob;
+use App\Models\RouteAssignment;
+
 
 
 
@@ -1491,7 +1493,7 @@ EOT;
     {
         try {
             // Paso 1: Cargamos la ruta con sus items.
-            $route = Routes::with('items')->find($id);
+            $route = Routes::with('items','assignments')->find($id);
 
             if (!$route) {
                 return response()->success([
@@ -1512,6 +1514,12 @@ EOT;
             }else{
                 $route->ia_status = 'completed';
                 $route->save();
+
+                /**
+                 * Meter función externa aqui
+                 */
+                //$routes =   fetch_delivery_box_external();
+
                 return response()->success(array_merge([
                     'route'     =>  $route                    
                 ], []), 'Hoja de ruta Nueva');
@@ -1920,70 +1928,105 @@ EOT;
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'cache_json' => 'nullable|array',
-                'ia_status'  => 'nullable|string',
-                'name'       => 'nullable|string|max:255',
-                'phone'      => 'required|string|max:20',
-                'origin_address' => 'required|string|max:255',
-                'destination_address' => 'nullable|string|max:255',
-                'type'       => 'required|in:deliver,pickup',
-                'date'       => 'nullable|date',
+                'cache_json'            => 'nullable|array',
+                'ia_status'             => 'nullable|string',
+                'name'                  => 'nullable|string|max:255',
+                'phone'                 => 'required|string|max:20',
+                'origin_address'        => 'required|string|max:255',
+                'destination_address'   => 'nullable|string|max:255',
+                'type'                  => 'required|in:deliver,pickup',
+                'date'                  => 'nullable|date',
             ]);
+
+            //p( $request->all());    
 
             $route = Routes::findOrFail($id);
 
-            // 1. Persistir Cache y Datos Maestros
+            // 1. Datos maestros
             $cacheData = $request->input('cache_json');
             if ($cacheData) {
                 $route->cache_json = json_encode($cacheData, JSON_UNESCAPED_UNICODE);
             }
-            
+
             $route->fill($validated);
             $route->ia_status = $request->input('ia_status', 'completed');
             $route->save();
 
-            // 2. Persistir Items usando el Modelo RouteItem directamente
+            // 2. Items y asignaciones
             if (is_array($cacheData) && count($cacheData) > 0) {
-                
-                // Eliminamos items viejos vinculados a esta ruta
+
                 \App\Models\RouteItem::where('route_id', $route->id)->delete();
+                \App\Models\RouteAssignment::where('route_id', $route->id)->delete();
 
                 foreach ($cacheData as $row) {
-                    // Mapeo riguroso de campos (IA -> Database)
-                    $insertData = [
-                        'route_id'            => $route->id, // Asignación manual para seguridad
-                        'guide'               => $row['guideNumber'] ?? ($row['guide'] ?? null),
-                        'name'                => $row['name'] ?? 'Movex Cliente',
-                        'phone'               => $row['phone'] ?? ($row['phone_sender'] ?? null),
-                        'origin_address'      => $row['address'] ?? ($row['origin_address'] ?? null),
-                        'destination_address' => $row['destination_address'] ?? null,
-                        'observation'         => $row['observation'] ?? '',
-                        'type'                => $row['type'] ?? 'pickup',
-                        'status'              => $row['status'] ?? 'Agendado',
-                        'lat'                 => isset($row['lat']) ? (float)$row['lat'] : null,
-                        'lng'                 => isset($row['lng']) ? (float)$row['lng'] : null,
-                        'day'                 => $row['day'] ?? ($row['pickup_day'] ?? 1),
-                        'guide_remote'        => $row['guide_items'] ?? null,
-                    ];
+                    /*
+                    p($route);    
+                    if($row["id"]=="1352"){
+                        
+                    }
+                    */
+                    
 
-                    // Inserción directa mediante el Modelo
-                    \App\Models\RouteItem::create($insertData);
+                    $guideBase = $row['guideNumber'] ?? ($row['guide'] ?? null);
+
+                    \App\Models\RouteItem::create([
+                        'route_id'            => $route->id,
+                        'guide'               => $guideBase,
+                        'json_dataset'        =>    $row,
+                        'name'                =>    $row['name'] ?? 'Movex Cliente',
+                        'phone'               =>    $row['phone'] ?? ($row['phone_sender'] ?? null),
+                        'origin_address'      =>    $row['address'] ?? ($row['origin_address'] ?? null),
+                        'destination_address' =>    $row['destination_address'] ?? null,
+                        'observation'         =>    $row['observation'] ?? '',
+                        'type'                =>    $row['type'] ?? 'pickup',
+                        'status'              =>    $row['status'] ?? 'Agendado',
+                        'lat'                 =>    isset($row['lat']) ? (float) $row['lat'] : null,
+                        'lng'                 =>    isset($row['lng']) ? (float) $row['lng'] : null,
+                        'day'                 =>    $row['day'] ?? ($row['pickup_day'] ?? 1),
+                        'guide_remote'        =>    $row['guide_items'] ?? null,
+                    ]);
+
+                    // RouteAssignment (guide / guide2)
+                    if ($guideBase && !empty($row['guide_items'])) {
+                        $guides2 = explode(',', $row['guide_items']);
+
+                        foreach ($guides2 as $guide2) {
+                            \App\Models\RouteAssignment::updateOrCreate(
+                                [
+                                    'route_id' => $route->id,
+                                    'guide'    => $guideBase,
+                                    'guide2'   => trim($guide2),
+                                ],
+                                [
+                                    'route_id' => $route->id,
+                                    'guide'    => $guideBase,
+                                    'guide2'   => trim($guide2),
+                                ]
+                            );
+                        }
+                    }
                 }
             }
 
             DB::commit();
-            
-            // Cargamos la data fresca para confirmar
+
             $route->load('items');
 
-            return response()->success(compact('route'), 'Ruta e Items (RouteItem) actualizados correctamente.');
-            
+            return response()->success(
+                compact('route'),
+                'Ruta, Items y Asignaciones actualizadas correctamente.'
+            );
+
         } catch (\Throwable $e) {
             DB::rollBack();
-            \Illuminate\Support\Facades\Log::error("Error en RouteUpdate: " . $e->getMessage());
-            return response()->error("No se pudo guardar: " . $e->getMessage(), 500);
+            \Log::error('RouteUpdate error: ' . $e->getMessage());
+            return response()->error(
+                'No se pudo guardar: ' . $e->getMessage(),
+                500
+            );
         }
     }
+
 
 
 
@@ -2165,11 +2208,61 @@ EOT;
     }
 
 
-
-
-
-
     public function setStatusAddressByItems(Request $request, string $id)
+    {
+        $validator = Validator::make($request->all(), [
+        'route_items' => 'required|integer|exists:route_items,id',
+        'status'      => 'required|string|in:accept,reject,cancel',
+        'row'         => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+        return response()->error('Datos inválidos.', 422, $validator->errors());
+        }
+
+        try {
+        $item = RouteItem::findOrFail($request->route_items);
+
+        $statusMap = [
+            'accept' => 'Agendado',
+            'reject' => 'Rechazado',
+            'cancel' => 'Cancelado',
+        ];
+
+        $dbStatus = $statusMap[$request->status];
+
+        // 🔑 key estable: guia BD + caja
+        $key = $item->guide . '_' . $request->row;
+
+        $jsonStatus = is_array($item->json_status) ? $item->json_status : [];
+
+        $jsonStatus[$key] = [
+            'status'     => $dbStatus,
+            'updated_at' => now()->toDateTimeString(),
+        ];
+
+        //p($jsonStatus,false);
+
+        $item->json_status = $jsonStatus;
+        $item->save();
+
+        return response()->success([
+            'route_item_id' => $item->id,
+            'json_status'   => $jsonStatus,
+        ], 'Estado actualizado correctamente por item.');
+
+        } catch (ModelNotFoundException $e) {
+        return response()->error('Item no encontrado.', 404);
+        } catch (\Throwable $e) {
+        return response()->error('Error interno: ' . $e->getMessage(), 500);
+        }
+    }
+
+
+
+
+
+    public function setStatusAddressByItemsAntes(Request $request, string $id)
     {
         $validator = Validator::make($request->all(), [
             'route_items'      => 'required|integer|exists:route_items,id',
@@ -2433,6 +2526,7 @@ EOT;
      * Procesa un payload de paquetes, genera una lista de direcciones enriquecida
      * y prepara el prompt de optimización para Gemini.
      */
+    
     public function setIaManualImport(Request $request, string $id)
     {
         try {
@@ -2440,9 +2534,178 @@ EOT;
                 'packages' => 'required|array',
             ]);
 
-            $route = Routes::findOrFail($id);
-            $origin = $route->origin_address;
+            $route       = Routes::findOrFail($id);
+            $origin      = $route->origin_address;
             $destination = $route->destination_address;
+
+            $cacheKey = "gemini_route_{$id}";
+
+            $routes_ready = [];
+            $addressList  = "";
+
+            foreach ($validated['packages'] as $index => $value) {
+
+                $itemsSource = $value['items'] ?? $value['sender_location']['items'] ?? [];
+                $cajas       = [];
+
+                foreach ($itemsSource as $item) {
+                    if (!empty($item['size'])) {
+                        $cajas[] = $item['size'];
+                    }
+                }
+
+                $locationData  = $value['sender_location']['sender_location'] ?? $value['sender_location'] ?? [];
+                $formattedAddr = $value['sender_location']['sender_formatted_address']
+                                    ?? $value['address']
+                                    ?? 'Sin dirección';
+
+                $guideNumber  = $value['guideNumber'] ?? 'S/N';
+                $lat          = $locationData['lat'] ?? 0;
+                $lng          = $locationData['lng'] ?? 0;
+                $phoneSender  = $value['sender_location']['phone_sender'] ?? $value['phone_sender'] ?? 'N/A';
+                $pickupDay    = $value['sender_location']['pickup_day'] ?? $value['day'] ?? 1;
+                $deliveryDay  = $value['sender_location']['delivery_day'] ?? null;
+                $deposit      = $value['sender_location']['deposit'] ?? $value['deposit'] ?? 0;
+                $cost         = $value['sender_location']['cost'] ?? $value['cost'] ?? 0;
+
+                if ($deliveryDay) {
+                    $pickupDay = null;
+                }
+
+                $addressList .= ($index + 1) . ") - {$formattedAddr}"
+                    . " | guideNumber: {$guideNumber}"
+                    . " | cajas: " . json_encode($cajas)
+                    . " | type: " . ($value['type'] ?? 'pickup')
+                    . " | phone_sender: {$phoneSender}"
+                    . " | pickup_day: {$pickupDay}"
+                    . " | delivery_day: {$deliveryDay}"
+                    . " | deposit: {$deposit}"
+                    . " | cost: {$cost}"
+                    . " | Lat: {$lat}"
+                    . " | Lng: {$lng}\n";
+
+                $itemsParts = [];
+                foreach ($itemsSource as $k => $item) {
+                    $size = $item['size'] ?? 'Box';
+                    $itemsParts[] = "{$guideNumber}_{$size}" . ($k + 1) . "_MOV";
+                }
+
+                $routes_ready[] = [
+                    'order'        => $index + 1,
+                    'guide'        => $guideNumber,
+                    'address'      => $formattedAddr,
+                    'lat'          => (float) $lat,
+                    'lng'          => (float) $lng,
+                    'guide_items'  => implode(',', $itemsParts),
+                    'cajas'        => $cajas,
+                    'name'         => $value['name_sender'] ?? 'Cliente Movex',
+                    'phone'        => $phoneSender,
+                    'pickup_day'   => $pickupDay,
+                    'delivery_day' => $deliveryDay,
+                    'deposit'      => $deposit,
+                    'cost'         => $cost,
+                    'type'         => $value['type'] ?? 'pickup',
+                ];
+            }
+
+            /**
+             * ==========================
+             * 🔒 CACHE: si existe, usarlo
+             * ==========================
+             */
+            if (Cache::has($cacheKey)) {
+                $optimizedDataset = Cache::get($cacheKey);
+            } else {
+
+                $prompt = <<<EOT
+    Actúa como experto en logística. Ordena estas paradas de forma eficiente de Roseville a Bakersfield.
+    INICIO: {$origin} | DESTINO: {$destination}
+
+    REGLAS:
+    - Devuelve EXCLUSIVAMENTE un JSON (array de objetos).
+    - No incluyas Inicio ni Destino en el JSON.
+    - Mantén guideNumber, cajas y phone_sender intactos.
+
+    FORMATO:
+    [{"order":1,"address":"...","lat":0,"lng":0,"guideNumber":"...","cajas":[],"phone_sender":"...","pickup_day":1,"delivery_day":1}]
+
+    PARADAS:
+    {$addressList}
+    EOT;
+
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(350)
+                    ->post($this->url, [
+                        'contents' => [[
+                            'role'  => 'user',
+                            'parts' => [['text' => $prompt]],
+                        ]]
+                    ]);
+
+                if (!$response->successful()) {
+                    return response()->success(
+                        ['routes' => $routes_ready, 'addressList' => $addressList],
+                        'Fallback: Orden original.'
+                    );
+                }
+
+                $rawText          = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+                $cleanJson        = preg_replace('/^```json\s*|```$/m', '', trim($rawText));
+                $optimizedDataset = json_decode($cleanJson, true);
+
+                // Guardar en cache (permanente o con TTL)
+                Cache::put($cacheKey, $optimizedDataset, now()->addDays(7));
+            }
+
+            /**
+             * ==========================
+             * 🔁 Re-mapeo técnico final
+             * ==========================
+             */
+            $finalRoutes = [];
+
+            foreach ($optimizedDataset as $iaRow) {
+                $original = collect($routes_ready)->firstWhere('guide', $iaRow['guideNumber']);
+                $pkgOriginal = collect($request->packages)->first(function ($pkg) use ($iaRow) {
+                    return
+                        ($pkg['guideNumber'] ?? null) === $iaRow['guideNumber']
+                        || ($pkg['sender_location']['guideNumber'] ?? null) === $iaRow['guideNumber'];
+                });
+                
+                if ($original) {
+                    $iaRow['pickup_day']        =   (!empty($pkgOriginal["pickup_day"]) && empty($pkgOriginal['delivery_day']))?$pkgOriginal['pickup_day']:null;
+                    $iaRow['delivery_day']      =   (empty($pkgOriginal['pickup_day']) && !empty($pkgOriginal['delivery_day']))?$pkgOriginal['delivery_day']:null;
+                    if($iaRow['delivery_day']){
+                        $iaRow['pickup_day']    =   null;
+                    }
+                    $iaRow['guide_items']   =   $original['guide_items'];
+                    $iaRow['cost']          =   $original['cost'];
+                    $iaRow['deposit']       =   $original['deposit'];
+                    $finalRoutes[]          =   $iaRow;
+                }                
+            }
+            
+
+            return response()->success(
+                ['routes' => $finalRoutes, 'addressList' => $addressList],
+                'Ruta optimizada (cacheada).'
+            );
+
+        } catch (\Throwable $e) {
+            return response()->error("Error: " . $e->getMessage(), 500);
+        }
+    }
+
+    public function setIaManualImportSinChache(Request $request, string $id)
+    {
+        try {
+            $validated = $request->validate([
+                'packages' => 'required|array',
+            ]);
+
+            $route          =   Routes::findOrFail($id);
+            $origin         =   $route->origin_address;
+            $destination    =   $route->destination_address;
 
             $routes_ready = [];
             $addressList = "";
@@ -2454,12 +2717,12 @@ EOT;
                 foreach ($itemsSource as $item) {
                     if (isset($item['size'])) $cajas[] = $item['size'];
                 }
-                $cajasJson = json_encode($cajas);
+                $cajasJson          =   json_encode($cajas);
 
                 // 2. Extraer ubicación de forma segura
-                $locationData = $value['sender_location']['sender_location'] ?? $value['sender_location'] ?? null;
-                $formattedAddr = $value['sender_location']['sender_formatted_address'] ?? $value['address'] ?? 'Sin dirección';
-                $guideNumber = $value['guideNumber'] ?? 'S/N';
+                $locationData       =   $value['sender_location']['sender_location'] ?? $value['sender_location'] ?? null;
+                $formattedAddr      =   $value['sender_location']['sender_formatted_address'] ?? $value['address'] ?? 'Sin dirección';
+                $guideNumber        =   $value['guideNumber'] ?? 'S/N';
 
                 // 3. Manejo de Coordenadas
                 $lat = $locationData['lat'] ?? 0;
@@ -2469,6 +2732,12 @@ EOT;
                 // Usamos ?? para evitar el error "Undefined array key"
                 $phoneSender = $value['sender_location']['phone_sender'] ?? $value['phone_sender'] ?? 'N/A';
                 $pickupDay   = $value['sender_location']['pickup_day'] ?? $value['day'] ?? 1;
+                
+                $deliveryDay = $value['sender_location']['delivery_day']??null;
+                if($deliveryDay){
+                    $pickupDay   =  null;
+                }
+
                 $deposit     = $value['sender_location']['deposit'] ?? $value['deposit'] ?? 0;
                 $cost        = $value['sender_location']['cost'] ?? $value['cost'] ?? 0;
 
@@ -2478,6 +2747,7 @@ EOT;
                                 " | type: " . ($value['type'] ?? 'pickup') . 
                                 " | phone_sender: " . $phoneSender .
                                 " | pickup_day: " . $pickupDay .
+                                " | delivery_day: " . $deliveryDay .
                                 " | deposit: " . $deposit .
                                 " | cost: " . $cost .
                                 " | Lat: " . $lat . 
@@ -2501,7 +2771,8 @@ EOT;
                     'cajas'       => $cajas,
                     'name'        => $value['name_sender'] ?? 'Cliente Movex',
                     'phone'       => $phoneSender,
-                    'pickup_day'  => $pickupDay,
+                    'pickup_day'    => $pickupDay,
+                    'delivery_day'  => $deliveryDay,
                     'deposit'     => $deposit,
                     'cost'        => $cost,
                     'type'        => $value['type'] ?? 'pickup'
@@ -2516,7 +2787,7 @@ EOT;
     - Devuelve EXCLUSIVAMENTE un JSON (array de objetos).
     - No incluyas Inicio ni Destino en el JSON.
     - Mantén guideNumber, cajas y phone_sender intactos.
-    FORMATO: [{"order":1, "address":"...", "lat":0.0, "lng":0.0, "guideNumber":"...", "cajas":[], "phone_sender":"...", "pickup_day":1}]
+    FORMATO: [{"order":1, "address":"...", "lat":0.0, "lng":0.0, "guideNumber":"...", "cajas":[], "phone_sender":"...", "pickup_day":1, "delivery_day":1}]
     PARADAS:
     {$addressList}
     EOT;
@@ -2529,9 +2800,9 @@ EOT;
                 ]);
 
             if ($response->successful()) {
-                $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
-                $cleanJson = preg_replace('/^```json\s*|```$/m', '', trim($rawText));
-                $optimizedDataset = json_decode($cleanJson, true);
+                $rawText            =   data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+                $cleanJson          =   preg_replace('/^```json\s*|```$/m', '', trim($rawText));
+                $optimizedDataset   =   json_decode($cleanJson, true);
 
                 // 8. Re-mapear con datos técnicos (guide_items)
                 $finalRoutes = [];
@@ -2539,17 +2810,18 @@ EOT;
                     foreach ($optimizedDataset as $iaRow) {
                         $original = collect($routes_ready)->firstWhere('guide', $iaRow['guideNumber']);
                         if ($original) {
-                            $iaRow['guide_items'] = $original['guide_items'];
-                            $iaRow['cost'] = $original['cost'];
-                            $iaRow['deposit'] = $original['deposit'];
-                            $finalRoutes[] = $iaRow;
+                            $iaRow['guide_items']   =   $original['guide_items'];
+                            $iaRow['cost']          =   $original['cost'];
+                            $iaRow['deposit']       =   $original['deposit'];
+                            p([$iaRow,$original]);
+                            $finalRoutes[]          =   $iaRow;
                         }
                     }
-                    return response()->success(['routes' => $finalRoutes], 'Ruta optimizada.');
+                    return response()->success(['routes' => $finalRoutes,"addressList"=>$addressList], 'Ruta optimizada.');
                 }
             }
 
-            return response()->success(['routes' => $routes_ready], 'Fallback: Orden original.');
+            return response()->success(['routes' => $routes_ready, "addressList"=>$addressList], 'Fallback: Orden original.');
 
         } catch (\Throwable $e) {
             return response()->error("Error: " . $e->getMessage(), 500);

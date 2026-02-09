@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Card from "@/components/card";
 import RouteMap from "@/components/RouteMap/RouteMap";
 import RouteListColumn from "./RouteListColumn";
 import ItemsListColumn from "./ItemsListColumn";
+import { pickup_day } from "@/utils/dataset";
 
 
 const test={
@@ -98,11 +99,18 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   cache_json
 }) => {
   const [routes, setRoutes] = useState<RouteItem[]>(initialRoutes);
-  const [expandedItems, setExpandedItems] = useState<number[]>([]);
+  //const [expandedItems, setExpandedItems] = useState<number[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
   const [reorder, setReorder] = useState<number[]>([]);
+  const [assignments, setAssignments] = useState<number[]>([]);
 
   
+  //console.log(formData?.dataset?.route?.assignments)
+  useEffect(()=>{
+    if(formData?.dataset?.route?.assignments){
+      setAssignments(formData?.dataset?.route?.assignments)
+    }
+  },[formData?.dataset?.route?.assignments])
 
   const toggleSelect = (idx: number) => {
     setSelected((prev) =>
@@ -111,7 +119,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
   };
 
   const resolvedata = (res:any)=>{
-    console.log(res)
+    //console.log(res)
     if(!res?.map)return;
     const sanitizedRoutes = res.map((iaItem: any) => {
       const originalData  = remote.find(r => r.guideNumber === iaItem.guideNumber) || {};
@@ -193,7 +201,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
     );
   };
 
-  //console.log(reorder)
+  //console.log(assignments)
 
   return (
     <div className="mt-5">
@@ -217,9 +225,11 @@ const CSRRouteImportComponent: React.FC<Props> = ({
 
         <div className="space-y-4">
           {remote.map((row: any, idx: number) => {
-            const guides = row.guide_items?.split(",") ?? [];
+            const guides      = row.guide_items?.split(",") ?? [];
             const itemsDetail = row.sender_location?.items ?? [];
-
+            const result      =  pickup_day.find((s:any)=>{return s.value===row?.delivery_day||s.value===row?.pickup_day}) 
+            const rel         =  assignments.find((s:any)=>{return s.guide===row?.guideNumber})??null
+            //console.log(row?.output_address) 
             return (
               <div
                 key={idx}
@@ -232,34 +242,42 @@ const CSRRouteImportComponent: React.FC<Props> = ({
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
-                      checked={selected.includes(idx)}
+                      checked={selected.includes(idx)||(rel?true:false)}
                       onChange={() => toggleSelect(idx)}
                       className="mt-1"
                     />
 
                     <div>
                       <p className="text-sm font-semibold text-gray-800">
-                        {row.name_sender}
+                        
+                        {
+                          row?.company_name?<Fragment>
+                            { row?.company_name } -  {row.name_sender}
+                          </Fragment>:<Fragment>
+                            {row.name_sender} - {row?.sender_location?.name_sender}
+                          </Fragment>
+                        }
+                        
                       </p>
                       <p className="text-xs text-gray-500">
                         📞 {row.phone_sender}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        📍 {row.address}
+                        📍 {row.address || row?.output_address}
                       </p>
                     </div>
                   </div>
 
                   <span className="text-[10px] px-2 py-1 rounded bg-blue-50 text-blue-700 uppercase">
-                    {row.type}
+                    {row?.delivery_day?"Llevar Caja":"Recoger Caja"}
                   </span>
                 </div>
 
                 {/* Métricas */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                   <div className="bg-gray-50 rounded-lg p-2">
-                    <p className="text-gray-500">Pickup día</p>
-                    <p className="font-semibold">{row.day ?? "—"}</p>
+                    <p className="text-gray-500"> {row?.delivery_day?"Llevar el":"Recoger el"} día</p>
+                    <p className="font-semibold"> { result?.label ?? "—"}</p>
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-2">
@@ -290,22 +308,28 @@ const CSRRouteImportComponent: React.FC<Props> = ({
                 </div>
 
                 {/* Contenido */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Contenido</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                    {itemsDetail.map((it: any, i: number) => (
-                      <div
-                        key={i}
-                        className="border rounded-lg p-2 bg-gray-50"
-                      >
-                        <p className="font-semibold">{it.size}</p>
-                        <p>Costo: ${it.cost}</p>
-                        <p>Precio: ${it.price}</p>
-                        <p>Seguro: ${it.insurance}</p>
+
+                {
+                  !row?.delivery_day&&itemsDetail?.length>0&&(
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Contenido</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                        {itemsDetail.map((it: any, i: number) => (
+                          <div
+                            key={i}
+                            className="border rounded-lg p-2 bg-gray-50"
+                          >
+                            <p className="font-semibold">{it.size}</p>
+                            <p>Costo: ${it.cost}</p>
+                            <p>Precio: ${it.price}</p>
+                            <p>Seguro: ${it.insurance}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  )
+                }
+                
 
                 {/* Guías */}
                 <div>

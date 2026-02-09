@@ -47,6 +47,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
 
         setInputs(data);
 
+        //console.log(data)
+
         // --- SANEAMIENTO CRÍTICO ---
         if (data.cache_json && data.items) {
           // 1. Decodificar si viene como string
@@ -60,8 +62,10 @@ const CSRRouteFormComponent: React.FC<any> = () => {
             const dbMatch = data.items.find((it: any) => 
                it.origin_address === (route.address || route.origin_address)
             );
-
+            
             return {
+              //samantha:dbMatch,
+              statuses:dbMatch?.json_status,
               ...route,
               // Forzamos el ID real de la base de datos para que handleAccept funcione
               id: dbMatch?.id || route.id, 
@@ -82,6 +86,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
       .finally(() => setLoading(false));
   };
 
+
+  
   /*
   const getInit = () => {
     setLoading(true);
@@ -111,7 +117,7 @@ const CSRRouteFormComponent: React.FC<any> = () => {
     return <div className="mt-5 grid h-full grid-cols-1 gap-5">Esperando por la IA...</div>
   }
 
-  console.log(routes)
+  //console.log(routes)
 
   return (
     <div className="mt-5 grid h-full grid-cols-1 gap-5">

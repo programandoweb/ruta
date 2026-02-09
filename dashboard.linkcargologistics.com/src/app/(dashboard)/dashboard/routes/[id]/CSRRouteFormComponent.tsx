@@ -185,8 +185,14 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                 const rows: any[] = [];
 
                 json.data.forEach((pkg: any) => {
+
+                  const name_sender   = pkg?.name_sender??""
+                  const company_name  = (pkg?.name_sender)?pkg?.company?.name:"";
+
+                  //console.log(pkg?.name_sender)
+
                   // Solo guías que terminen en MOV
-                  if (!pkg?.guideNumber?.toLowerCase().includes("m")) return;
+                  //if (!pkg?.guideNumber?.toLowerCase().includes("m")) return;
 
                   const baseGuide = pkg.guideNumber; // ej: ECM91R1J393
                   const prefix = baseGuide.substring(0, 2); // EC
@@ -204,25 +210,36 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                     itemsConcat.push(guide);
                   });
 
-                  
-
+                  //console.log(pkg?.pickup_day,pkg?.delivery_day)
+                  /*
+                  if(!pkg?.sender_location?.company_id){
+                    //console.log(pkg?.company?.name)
+                  }
+                  */
+                 
                   rows.push({
                     ...pkg,
+                    company_name:company_name,
                     guide_items: itemsConcat.join(","),                 // Col 1
-                    name_sender: pkg.company?.name ?? "",               // Col 2
+                    name_sender: name_sender,               // Col 2
                     phone_sender: pkg.company?.celular ?? "",            // Col 3
                     address:
                       pkg.sender_location?.sender_formatted_address ??
                       "",                                                // Col 4
-                    type: "pickup",                                     // Col 5
+                    type: pkg?.delivery_day?"delivery":"pickup",        // Col 5
                     status: "",                                         // Col 6
                     payment: "",                                        // Col 7
                     cost: pkg.cost ?? "",                               // Col 8
                     deposit: pkg.deposit ?? "",                         // Col 9
                     comment: pkg.description ?? "",                     // Col 10
                     day: pkg.sender_location?.pickup_day ?? "",         // Col 11
+                    pickup_day: pkg.pickup_day ?? "",                         // Col 9
+                    delivery_day: pkg.delivery_day ?? "",                         // Col 9
                   });
+
                 });
+
+                //console.log(rows)
 
                 setRemote(rows);
               }
@@ -308,10 +325,6 @@ const CSRRouteFormComponent: React.FC<any> = () => {
                 </div>
               )
             }
-
-
-            
-
             {inputs?.id && (
               <Fragment>
                 {loading ? (

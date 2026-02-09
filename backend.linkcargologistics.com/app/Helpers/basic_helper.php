@@ -18,6 +18,77 @@ use App\Models\Domain;
 use App\Models\User;
 use App\Models\MasterTable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+
+
+if (!function_exists('fetch_delivery_box_external')) {
+
+    /**
+     * Consume backend externo y transforma dataset Delivery Box (MOV)
+     *
+     * @param string $endpoint
+     * @param int|string $id
+     * @return array
+     */
+    function fetch_delivery_box_external(string $endpoint, $id): array
+    {
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->get("{$endpoint}/delivery_box/{$id}");
+
+        if (!$response->successful()) {
+            return [];
+        }
+
+        $json = $response->json();
+        if (empty($json['data'])) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ($json['data'] as $pkg) {
+
+            // Solo guías MOV
+            if (empty($pkg['guideNumber']) || stripos($pkg['guideNumber'], 'm') === false) {
+                continue;
+            }
+
+            $baseGuide = $pkg['guideNumber'];   // ECM91R1J393
+            $prefix    = substr($baseGuide, 0, 2);
+            $rest      = substr($baseGuide, 2);
+
+            $itemsConcat = [];
+
+            if (!empty($pkg['items'])) {
+                foreach ($pkg['items'] as $index => $it) {
+                    $key     = $index + 1;
+                    $size    = $it['size'] ?? '';
+                    $company = 'MOV';
+
+                    $itemsConcat[] = "{$prefix}{$rest}_{$size}{$key}_{$company}";
+                }
+            }
+
+            $rows[] = [
+                'guide_items'  => implode(',', $itemsConcat),
+                'name_sender'  => $pkg['company']['name'] ?? '',
+                'phone_sender' => $pkg['company']['celular'] ?? '',
+                'address'      => $pkg['sender_location']['sender_formatted_address'] ?? '',
+                'type'         => 'pickup',
+                'status'       => '',
+                'payment'      => '',
+                'cost'         => $pkg['cost'] ?? '',
+                'deposit'      => $pkg['deposit'] ?? '',
+                'comment'      => $pkg['description'] ?? '',
+                'day'          => $pkg['sender_location']['pickup_day'] ?? '',
+            ];
+        }
+
+        return $rows;
+    }
+}
+
 
 if (!function_exists('create_notification')) {
     function create_notification(array $params): ?\App\Models\Notification

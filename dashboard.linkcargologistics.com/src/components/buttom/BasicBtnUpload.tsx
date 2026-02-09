@@ -24,6 +24,7 @@ const BasicBtnUpload: React.FC<UploadBtnProps> = ({
   fileName,
   keys,
   gallery: galleryProps,
+  setFormData
 }) => {
   const storage = useAsyncStorage();
 
@@ -92,6 +93,10 @@ const BasicBtnUpload: React.FC<UploadBtnProps> = ({
 
       if (slug) {
         setGallery((prev) => [...prev, slug]);
+        setFormData((prev: any) => ({
+          ...prev,
+          gallery: [...(prev.gallery || []), slug],
+        }));
       }
     } finally {
       setIsLoading(false);

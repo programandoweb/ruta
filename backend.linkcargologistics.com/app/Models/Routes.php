@@ -47,4 +47,13 @@ class Routes extends Model
     {
         return $this->hasMany(RouteItem::class, 'route_id');
     }
+
+    /**
+     * Relación con las asignaciones de guías de la ruta.
+     */
+    public function assignments()
+    {
+        return $this->hasMany(RouteAssignment::class, 'route_id');
+    }
+
 }
