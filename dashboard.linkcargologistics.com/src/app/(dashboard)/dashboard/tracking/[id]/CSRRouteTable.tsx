@@ -104,9 +104,10 @@ const CSRRouteTable = ({
 
                 <td className="px-5 py-4 align-top space-y-3">
                   {route?.cajas?.map((row: any, k: number) => {                    
+                    if(!relatedItem?.guide)return null;
                     //const current =   data?.items?.find((s:any)=>{return s.})
                     //console.log(row)
-                    const statusKey = `${relatedItem.guide}_${row}`;
+                    const statusKey     = `${relatedItem?.guide}_${row}`;
                     const currentStatus = status?.[statusKey]?.status ?? "Borrador";
                     const service         =   "MOV"
                     const keys_evidence   =   "evidence_"+relatedItem.guide+row;

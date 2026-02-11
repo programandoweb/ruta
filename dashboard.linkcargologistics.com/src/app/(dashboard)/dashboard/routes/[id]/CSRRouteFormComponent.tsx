@@ -71,13 +71,13 @@ const CSRRouteFormComponent: React.FC<any> = () => {
           }));
         }
 
-        /*
+        
         if (response && response?.prompt) {
           setPrompt(response?.prompt);
         }else{
           setPrompt(response?.[prefixed]?.prompt);
         }
-        */
+        
 
         if(response?.route){
           set_cache_json(response?.route?.cache_json)          
@@ -170,100 +170,87 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   };
 
   useEffect(() => {
-      if (!endpoints || !inputs?.id) return;
+    if (!endpoints || !inputs?.id) return;
 
-      const fetchDeliveryBox = async () => {
-          try {
-              const res = await fetch(
-                  `${endpoints}/delivery_box/${inputs.id}`,
-                  {
-                      method: 'GET',
-                      headers: {
-                          'Content-Type': 'application/json',                          
-                      },
-                  }
-              );
+    const urls = endpoints
+      .split(",")
+      .map((u) => u.trim())
+      .filter(Boolean);
 
-              const json = await res.json();
+    const fetchDeliveryBox = async () => {
+      try {
+        const requests = urls.map((baseUrl) =>
+          fetch(`${baseUrl}/delivery_box/${inputs.id}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }).then(async (res) => {
+            const json = await res.json();
+            if (!res.ok) {
+              console.error(json);
+              return [];
+            }
+            return json?.data ?? [];
+          })
+        );
 
-              if (!res.ok) {
-                  console.error(json);
-                  return;
-              }
-              
-              if (json?.data) {
-                const rows: any[] = [];
+        const responses = await Promise.all(requests);
 
-                json.data.forEach((pkg: any) => {
+        const rows: any[] = [];
 
-                  const name_sender   = pkg?.name_sender??""
-                  const company_name  = (pkg?.name_sender)?pkg?.company?.name:"";
+        responses.forEach((dataset) => {
+          dataset.forEach((pkg: any) => {
+            const name_sender = pkg?.name_sender ?? "";
+            const company_name = pkg?.name_sender
+              ? pkg?.company?.name
+              : "";
 
-                  //console.log(pkg?.name_sender)
+            const baseGuide = pkg.guideNumber ?? "";
+            const prefix = baseGuide.substring(0, 2);
+            const rest = baseGuide.substring(2);
 
-                  // Solo guías que terminen en MOV
-                  //if (!pkg?.guideNumber?.toLowerCase().includes("m")) return;
+            const itemsConcat: string[] = [];
 
-                  const baseGuide = pkg.guideNumber; // ej: ECM91R1J393
-                  const prefix = baseGuide.substring(0, 2); // EC
-                  const rest = baseGuide.substring(2);      // M91R1J393
+            pkg.items?.forEach((it: any, index: number) => {
+              const key = index + 1;
+              const size = it.size;
+              const company = "MOV";
 
-                  const itemsConcat: string[] = [];
+              const guide = `${prefix}${rest}_${size}${key}_${company}`;
+              itemsConcat.push(guide);
+            });
 
-                  pkg.items?.forEach((it: any, index: number) => {
-                    const key = index + 1; // para diferenciar guías
-                    const size = it.size;  // 18x18x18
-                    const company = "MOV";
-                    const guide =
-                      `${prefix}${rest.substring(0, 1)}${rest.substring(1)}_${size}${key}_${company}`;
+            rows.push({
+              ...pkg,
+              company_name,
+              guide_items: itemsConcat.join(","),
+              name_sender,
+              phone_sender: pkg.company?.celular ?? "",
+              address:
+                pkg.sender_location?.sender_formatted_address ?? "",
+              type: pkg?.delivery_day ? "delivery" : "pickup",
+              status: "",
+              payment: "",
+              cost: pkg.cost ?? "",
+              deposit: pkg.deposit ?? "",
+              comment: pkg.description ?? "",
+              day: pkg.sender_location?.pickup_day ?? "",
+              pickup_day: pkg.pickup_day ?? "",
+              delivery_day: pkg.delivery_day ?? "",
+            });
+          });
+        });
 
-                    itemsConcat.push(guide);
-                  });
+        setRemote(rows);
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-                  //console.log(pkg?.pickup_day,pkg?.delivery_day)
-                  /*
-                  if(!pkg?.sender_location?.company_id){
-                    //console.log(pkg?.company?.name)
-                  }
-                  */
-                 
-                  rows.push({
-                    ...pkg,
-                    company_name:company_name,
-                    guide_items: itemsConcat.join(","),                 // Col 1
-                    name_sender: name_sender,               // Col 2
-                    phone_sender: pkg.company?.celular ?? "",            // Col 3
-                    address:
-                      pkg.sender_location?.sender_formatted_address ??
-                      "",                                                // Col 4
-                    type: pkg?.delivery_day?"delivery":"pickup",        // Col 5
-                    status: "",                                         // Col 6
-                    payment: "",                                        // Col 7
-                    cost: pkg.cost ?? "",                               // Col 8
-                    deposit: pkg.deposit ?? "",                         // Col 9
-                    comment: pkg.description ?? "",                     // Col 10
-                    day: pkg.sender_location?.pickup_day ?? "",         // Col 11
-                    pickup_day: pkg.pickup_day ?? "",                         // Col 9
-                    delivery_day: pkg.delivery_day ?? "",                         // Col 9
-                  });
-
-                });
-
-                //console.log(rows)
-
-                setRemote(rows);
-              }
-
-              
-              
-          } catch (error) {
-              console.error(error);
-          }
-      };
-
-      fetchDeliveryBox();
-
+    fetchDeliveryBox();
   }, [inputs?.id]);
+
 
   //console.log(remote)
 

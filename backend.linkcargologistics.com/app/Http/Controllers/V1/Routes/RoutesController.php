@@ -2428,8 +2428,118 @@ EOT;
         }
     }
 
-    
+
+    /**
+     * Sincroniza route_items y route_assignments
+     * a partir de un dataset IA ya validado.
+     */
+    private function syncItemsFromDataset(Routes $route, array $dataset): void
+    {
+        // Limpieza total (misma estrategia que update())
+        RouteItem::where('route_id', $route->id)->delete();
+        RouteAssignment::where('route_id', $route->id)->delete();
+
+        foreach ($dataset as $row) {
+
+            $guideBase = $row['guideNumber']
+                ?? $row['guide']
+                ?? null;
+
+            $item = RouteItem::create([
+                'route_id'            => $route->id,
+                'guide'               => $guideBase,
+                'json_dataset'        => json_encode($row, JSON_UNESCAPED_UNICODE),
+                'name'                => $row['name'] ?? 'Movex Cliente',
+                'phone'               => $row['phone'] ?? ($row['phone_sender'] ?? null),
+                'origin_address'      => $row['address'] ?? ($row['origin_address'] ?? null),
+                'destination_address' => $row['destination_address'] ?? null,
+                'observation'         => $row['observation'] ?? '',
+                'type'                => $row['type'] ?? 'pickup',
+                'status'              => $row['status'] ?? 'Agendado',
+                'lat'                 => isset($row['lat']) ? (float)$row['lat'] : null,
+                'lng'                 => isset($row['lng']) ? (float)$row['lng'] : null,
+                'day'                 => $row['day'] ?? ($row['pickup_day'] ?? 1),
+                'guide_remote'        => $row['guide_items'] ?? null,
+            ]);
+
+            // Asignaciones por caja
+            if ($guideBase && !empty($row['guide_items'])) {
+                foreach (explode(',', $row['guide_items']) as $guide2) {
+                    RouteAssignment::updateOrCreate(
+                        [
+                            'route_id' => $route->id,
+                            'guide'    => $guideBase,
+                            'guide2'   => trim($guide2),
+                        ],
+                        [
+                            'route_id' => $route->id,
+                            'guide'    => $guideBase,
+                            'guide2'   => trim($guide2),
+                        ]
+                    );
+                }
+            }
+        }
+    }
+
+
     public function setIaManualV2(Request $request, string $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'prompt'    => 'required|string',
+            'manualIa'  => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->error($validator->errors()->first(), 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $route = Routes::with('items')->findOrFail($id);
+
+            $decodedManualIa = json_decode($request->input('manualIa'), true);
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($decodedManualIa)) {
+                return response()->error('manualIa no es un JSON válido', 422);
+            }
+
+            // Normalizar estructura
+            $dataset = $decodedManualIa['dataset'] ?? $decodedManualIa;
+
+            if (!is_array($dataset)) {
+                return response()->error('Dataset inválido', 422);
+            }
+
+            // 1️⃣ Guardar cache IA
+            $route->update([
+                'prompt'     => $request->input('prompt'),
+                'cache_json' => ['dataset' => $dataset],
+                'ia_status'  => 'order1',
+            ]);
+
+            // 2️⃣ 🔑 Poblar items reales
+            $this->syncItemsFromDataset($route, $dataset);
+
+            DB::commit();
+
+            $route->load('items');
+
+            return response()->success(
+                $route->only(['id', 'prompt', 'cache_json', 'items']),
+                'IA manual aplicada y sincronizada correctamente'
+            );
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->error($e->getMessage(), 500);
+        }
+    }
+
+
+
+    
+    public function setIaManualV2OLD(Request $request, string $id)
     {
         $validator = Validator::make($request->all(), [
             'prompt'   => 'required|string',
@@ -2455,7 +2565,7 @@ EOT;
 
         return response()->success(
             $route->only(['id', 'prompt', 'cache_json']),
-            'IA manual actualizada'
+            'IA manual actualizada V2'
         );
     }
 
@@ -2672,8 +2782,226 @@ EOT;
      * y prepara el prompt de optimización para Gemini.
      */
     
+    public function setIaManualImportOptimizadoPeroNoMeDaSuficientesDatos(Request $request, string $id)
+{
+    /**
+     * ==========================================================
+     * 🎯 OBJETIVO
+     * ----------------------------------------------------------
+     * - Enviar a Gemini solo datos mínimos
+     * - Validar JSON IA (evitar foreach null)
+     * - Si IA falla → devolver raw IA para debug
+     * ==========================================================
+     */
+
+    try {
+        $validated = $request->validate([
+            'packages' => 'required|array',
+        ]);
+
+        $route       = Routes::findOrFail($id);
+        $origin      = $route->origin_address;
+        $destination = $route->destination_address;
+
+        $cacheKey = "gemini_route_light_{$id}";
+
+        /**
+         * ==========================================================
+         * 🧱 DATASET BASE
+         * ==========================================================
+         */
+        $baseRoutes = [];
+        $lightStops = [];
+
+        foreach ($validated['packages'] as $index => $pkg) {
+
+            $locationData = $pkg['sender_location']['sender_location']
+                ?? $pkg['sender_location']
+                ?? [];
+
+            $address = $pkg['sender_location']['sender_formatted_address']
+                ?? $pkg['address']
+                ?? $pkg['output_address']
+                ?? 'Sin dirección';
+
+            $guideNumber = $pkg['guideNumber'] ?? 'S/N';
+
+            $lat = (float) ($locationData['lat'] ?? 0);
+            $lng = (float) ($locationData['lng'] ?? 0);
+
+            $baseRoutes[$guideNumber] = [
+                'address'      => $address,
+                'items'        => $pkg['items'] ?? $pkg['sender_location']['items'] ?? [],
+                'phone_sender' => $pkg['sender_location']['phone_sender'] ?? $pkg['phone_sender'] ?? null,
+                'pickup_day'   => $pkg['sender_location']['pickup_day'] ?? $pkg['day'] ?? null,
+                'delivery_day' => $pkg['sender_location']['delivery_day'] ?? null,
+                'deposit'      => $pkg['sender_location']['deposit'] ?? $pkg['deposit'] ?? 0,
+                'cost'         => $pkg['sender_location']['cost'] ?? $pkg['cost'] ?? 0,
+            ];
+
+            $lightStops[] = [
+                'guideNumber' => $guideNumber,
+                'address'     => $address,
+                'lat'         => $lat,
+                'lng'         => $lng,
+            ];
+        }
+
+        /**
+         * ==========================================================
+         * 🧠 GEMINI (LOW TOKENS)
+         * ==========================================================
+         */
+        if (Cache::has($cacheKey)) {
+            $optimizedLight = Cache::get($cacheKey);
+        } else {
+
+            $prompt = <<<EOT
+Actúa como experto en logística.
+
+Ordena eficientemente estas paradas desde:
+INICIO: {$origin}
+DESTINO: {$destination}
+
+REGLAS:
+- Devuelve SOLO un JSON (array).
+- No incluyas inicio ni destino.
+- Mantén guideNumber intacto.
+- Si lat/lng son 0 o null, geolocaliza.
+- NO texto adicional.
+
+FORMATO:
+[
+  {
+    "order": 1,
+    "guideNumber": "ABC123",
+    "address": "Dirección",
+    "lat": 0,
+    "lng": 0
+  }
+]
+
+PARADAS:
+EOT;
+
+            $prompt .= json_encode($lightStops, JSON_UNESCAPED_UNICODE);
+
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->timeout(180)
+                ->post($this->url, [
+                    'contents' => [[
+                        'role'  => 'user',
+                        'parts' => [['text' => $prompt]],
+                    ]]
+                ]);
+
+            if (!$response->successful()) {
+                return response()->success(
+                    ['routes' => array_values($baseRoutes)],
+                    'Fallback HTTP'
+                );
+            }
+
+            /**
+             * ==========================================================
+             * 🛡️ VALIDACIÓN ESTRICTA JSON IA
+             * ==========================================================
+             */
+            $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+
+            // Limpieza defensiva
+            $rawTextClean = trim($rawText);
+            $rawTextClean = preg_replace('/^```json\s*|```$/m', '', $rawTextClean);
+
+            $decoded = json_decode($rawTextClean, true);
+
+            // ❌ JSON inválido → DEBUG CONTROLADO
+            if (
+                json_last_error() !== JSON_ERROR_NONE ||
+                !is_array($decoded)
+            ) {
+                return response()->success(
+                    [
+                        'routes'        => array_values($baseRoutes),
+                        'ia_raw'        => $rawText,
+                        'ia_raw_clean'  => $rawTextClean,
+                        'json_error'    => json_last_error_msg(),
+                    ],
+                    'IA devolvió JSON inválido'
+                );
+            }
+
+            $optimizedLight = $decoded;
+
+            Cache::put($cacheKey, $optimizedLight, now()->addDays(7));
+        }
+
+        /**
+         * ==========================================================
+         * 🔁 RECOMBINACIÓN FINAL
+         * ==========================================================
+         */
+        $finalRoutes = [];
+
+        foreach ($optimizedLight as $row) {
+
+            if (!isset($row['guideNumber'])) {
+                continue;
+            }
+
+            $guideNumber = $row['guideNumber'];
+
+            if (!isset($baseRoutes[$guideNumber])) {
+                continue;
+            }
+
+            $original = $baseRoutes[$guideNumber];
+
+            $cajas = [];
+            $guideItems = [];
+
+            foreach ($original['items'] as $k => $item) {
+                if (!empty($item['size'])) {
+                    $cajas[] = $item['size'];
+                    $guideItems[] = "{$guideNumber}_{$item['size']}" . ($k + 1) . "_MOV";
+                }
+            }
+
+            $finalRoutes[] = [
+                'order'        => (int) ($row['order'] ?? 0),
+                'address'      => $original['address'],
+                'lat'          => (float) ($row['lat'] ?? 0),
+                'lng'          => (float) ($row['lng'] ?? 0),
+                'guideNumber'  => $guideNumber,
+                'cajas'        => $cajas,
+                'phone_sender' => $original['phone_sender'],
+                'pickup_day'   => $original['delivery_day'] ? null : $original['pickup_day'],
+                'delivery_day' => $original['delivery_day'],
+                'guide_items'  => implode(',', $guideItems),
+                'cost'         => (float) $original['cost'],
+                'deposit'      => (float) $original['deposit'],
+            ];
+        }
+
+        return response()->success(
+            ['routes' => $finalRoutes],
+            'Ruta optimizada'
+        );
+
+    } catch (\Throwable $e) {
+        return response()->error("Error: {$e->getMessage()}", 500);
+    }
+}
+
+
+
+
+    
     public function setIaManualImport(Request $request, string $id)
     {
+        
+    
+
         try {
             $validated = $request->validate([
                 'packages' => 'required|array',
@@ -2818,6 +3146,14 @@ EOT;
              * ==========================
              */
             $finalRoutes = [];
+
+            // ✅ Validador defensivo
+            if (!is_array($optimizedDataset) || empty($optimizedDataset)) {
+                return response()->success(
+                    ['routes' => $routes_ready, 'addressList' => $addressList,"prompt"=>$prompt],
+                    'Fallback: Dataset IA inválido o vacío.'
+                );
+            }
 
             foreach ($optimizedDataset as $iaRow) {
                 $original = collect($routes_ready)->firstWhere('guide', $iaRow['guideNumber']);

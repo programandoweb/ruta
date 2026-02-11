@@ -169,7 +169,11 @@ const CSRRouteCardsMobile = ({
                   </div>
                 );
               })}
-              <CommentsSectionContainer module="attendance" pathname={"tracking_" + relatedItem.guide} />
+              {
+                (relatedItem?.guide)&&(
+                  <CommentsSectionContainer module="attendance" pathname={"tracking_" + relatedItem.guide} />
+                )
+              }              
             </div>
           </div>
         );
