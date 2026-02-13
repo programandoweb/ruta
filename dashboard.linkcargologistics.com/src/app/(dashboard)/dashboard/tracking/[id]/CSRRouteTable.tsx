@@ -171,7 +171,7 @@ const CSRRouteTable = ({
                           {currentStatus === "Borrador" ? (
                             <>
                               {
-                                !route?.delivery_day&&(
+                                route?.delivery_day&&(
                                   <Link
                                     target="_blank"
                                     title="PDF"
@@ -218,18 +218,23 @@ const CSRRouteTable = ({
                             </>
                           ) : (
                             <Fragment>
-                              <Link
-                                target="_blank"
-                                title="PDF"
-                                href={
-                                  service
-                                    ? `${ENDPOINT[service]}${row.guide}`
-                                    : "#"
-                                }
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <FaFilePdf size={18} />
-                              </Link>
+                              {
+                                !route?.delivery_day&&(
+                                  <Link
+                                    target="_blank"
+                                    title="PDF"
+                                    href={
+                                      service
+                                        ? `${ENDPOINT[service]}${row.guide}`
+                                        : "#"
+                                    }
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <FaFilePdf size={18} />
+                                  </Link>
+                                )
+                              }
+                              
                               <span className="text-xs font-bold uppercase text-gray-500">
                                 {row.status}
                               </span>
