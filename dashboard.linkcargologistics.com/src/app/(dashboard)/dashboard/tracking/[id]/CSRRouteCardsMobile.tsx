@@ -17,6 +17,8 @@ import {
 import BasicBtnUpload from "@/components/buttom/BasicBtnUpload";
 import Link from "next/link";
 import CommentsSectionContainer from "@/components/comments";
+import { DAYS } from "@/constants/days";
+import { formatearMonto } from "@/utils/fuctions";
 
 const ENDPOINT = {
   MOV: "https://app.movexlogistica.com/api/v1/packages/pdf/guide?guideNumber=",
@@ -38,6 +40,8 @@ const CSRRouteCardsMobile = ({
     <div className="space-y-5">
       {routes.map((route: any, index: number) => {
         const relatedItem = itemsById.get(route.phone);
+        const status = relatedItem?.json_status ?? {};
+        const service: ServiceKey = "MOV";
 
         return (
           <div
@@ -63,78 +67,91 @@ const CSRRouteCardsMobile = ({
               </button>
             </div>
 
-            {/* INFO CLIENTE */}
+            {/* INFO DETALLADA */}
             {relatedItem && (
               <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+                <p><b>Dirección IA:</b> {route.address}</p>
                 <p><b>Guía:</b> {relatedItem.guide}</p>
                 <p><b>Nombre:</b> {relatedItem.name || "No disponible"}</p>
+                <p><b>Cobrar:</b> {formatearMonto(route.cost)}</p>
+                <p><b>Depósito:</b> {formatearMonto(route.deposit)}</p>
                 <p><b>Teléfono:</b> {relatedItem.phone}</p>
+                <p><b>Observación:</b> {relatedItem.observation}</p>
+                <p><b>Día:</b> {DAYS[relatedItem.day]}</p>
+                <p>
+                  <b>Acción:</b>{" "}
+                  {!route?.delivery_day
+                    ? "Recoger caja"
+                    : "Entregar caja"}
+                </p>
 
-                <div className="flex justify-between items-center pt-1">
-                  <span className="font-semibold">
-                    {relatedItem.type === "pickup"
-                      ? "Recoger caja"
-                      : "Entregar caja"}
-                  </span>
-
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">
-                    {relatedItem.status}
-                  </span>
-                </div>
+                <CommentsSectionContainer
+                  module="attendance"
+                  pathname={"tracking_" + relatedItem.guide}
+                />
               </div>
             )}
 
             {/* CAJAS */}
             <div className="space-y-3">
-              {route?.json_box_and_guide?.map((row: any, k: number) => {
-                const service = row?.service as ServiceKey | undefined;
+              {route?.cajas?.map((row: any, k: number) => {
+                if (!relatedItem?.guide) return null;
+
+                const statusKey = `${relatedItem?.guide}_${row}`;
+                const currentStatus =
+                  status?.[statusKey]?.status ?? "Borrador";
+
+                const keysEvidence =
+                  "evidence_" + relatedItem.guide + row;
+
+                const evidence =
+                  relatedItem?.evidence_urls &&
+                  typeof relatedItem.evidence_urls === "object"
+                    ? relatedItem.evidence_urls[keysEvidence]
+                    : [];
 
                 return (
                   <div
                     key={k}
                     className="border rounded-lg p-3 space-y-3 bg-gray-50"
                   >
-                    {/* BOX INFO */}
+                    {/* BOX HEADER */}
                     <div className="flex justify-between items-center text-xs font-semibold">
                       <div>
-                        {row.guide}{" "}
+                        {relatedItem.guide}
                         <span className="text-gray-400 mx-1">|</span>
-                        {row.box}
+                        {row}
+                        <span className="text-gray-400 mx-1">|</span>
+                        {currentStatus}
                       </div>
-
-                      <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                        {row.status}
-                      </span>
                     </div>
 
                     {/* ACTIONS */}
                     <div className="flex flex-wrap items-center gap-3">
                       <BasicBtnUpload
-                        name={"evidence_" + row.guide + row.box}
+                        name={"evidence_" + relatedItem.guide + row}
                         keys={JSON.stringify({
                           order: data?.id,
                           lat: route?.lat,
                           lng: route?.lng,
                         })}
-                        gallery={row?.evidences}
+                        gallery={evidence || row?.evidences}
                         label="Subir evidencia"
                         setFormData={setInputs}
                       />
 
-                      <Link
-                        target="_blank"
-                        title="PDF"
-                        href={
-                          service
-                            ? `${ENDPOINT[service]}${row.guide}`
-                            : "#"
-                        }
-                        className="text-red-600"
-                      >
-                        <FaFilePdf size={18} />
-                      </Link>
+                      {route?.delivery_day && (
+                        <Link
+                          target="_blank"
+                          title="PDF"
+                          href={`${ENDPOINT[service]}${relatedItem.guide}`}
+                          className="text-red-600"
+                        >
+                          <FaFilePdf size={18} />
+                        </Link>
+                      )}
 
-                      {row.status === "Borrador" && (
+                      {currentStatus === "Borrador" && (
                         <Fragment>
                           <button
                             title="Aceptar"
@@ -165,15 +182,16 @@ const CSRRouteCardsMobile = ({
                           </button>
                         </Fragment>
                       )}
+
+                      {currentStatus !== "Borrador" && (
+                        <span className="text-xs font-bold uppercase text-gray-500">
+                          {currentStatus}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
-              {
-                (relatedItem?.guide)&&(
-                  <CommentsSectionContainer module="attendance" pathname={"tracking_" + relatedItem.guide} />
-                )
-              }              
             </div>
           </div>
         );

@@ -1531,9 +1531,14 @@ EOT;
                  */
                 //$routes =   fetch_delivery_box_external();
 
+                $drivers = \App\Models\User::whereHas('roles', function ($q) {
+                    $q->where('name', 'employees');
+                })->get();
+                $extra['drivers'] = $drivers;
+
                 return response()->success(array_merge([
                     'route'     =>  $route                    
-                ], []), 'Hoja de ruta Nueva');
+                ], $extra), 'Hoja de ruta Nueva');
                 return $this->resolveItemsGoogleMap($route);
             }            
 
@@ -1940,14 +1945,15 @@ EOT;
 
     try {
         $validated = $request->validate([
-            'cache_json'            => 'nullable|array',
-            'ia_status'             => 'nullable|string',
-            'name'                  => 'nullable|string|max:255',
-            'phone'                 => 'required|string|max:20',
-            'origin_address'        => 'required|string|max:255',
-            'destination_address'   => 'nullable|string|max:255',
-            'type'                  => 'required|in:deliver,pickup',
-            'date'                  => 'nullable|date',
+            'employees_id'          =>  'nullable',
+            'cache_json'            =>  'nullable|array',
+            'ia_status'             =>  'nullable|string',
+            'name'                  =>  'nullable|string|max:255',
+            'phone'                 =>  'required|string|max:20',
+            'origin_address'        =>  'required|string|max:255',
+            'destination_address'   =>  'nullable|string|max:255',
+            'type'                  =>  'required|in:deliver,pickup',
+            'date'                  =>  'nullable|date',
         ]);
 
         $route = Routes::findOrFail($id);
