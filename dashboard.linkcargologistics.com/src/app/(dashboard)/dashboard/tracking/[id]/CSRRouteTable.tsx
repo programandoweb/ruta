@@ -138,20 +138,33 @@ const CSRRouteTable = ({
                           
                         </div>
                         <div className="flex items-center gap-3">
+                          <BasicBtnUpload
+                            name={"evidence_" + relatedItem.guide + row}
+                            keys={JSON.stringify({
+                              order: data?.id,
+                              lat: route?.lat,
+                              lng: route?.lng,
+                            })}
+                            gallery={evidence||row?.evidences}
+                            label="Subir evidencia"
+                            setFormData={setInputs}
+                          />
                           {
+                            /*
                             !route?.delivery_day&&(
-                              <BasicBtnUpload
-                                name={"evidence_" + relatedItem.guide + row}
-                                keys={JSON.stringify({
-                                  order: data?.id,
-                                  lat: route?.lat,
-                                  lng: route?.lng,
-                                })}
-                                gallery={evidence||row?.evidences}
-                                label="Subir evidencia"
-                                setFormData={setInputs}
-                              />
+                                <BasicBtnUpload
+                                  name={"evidence_" + relatedItem.guide + row}
+                                  keys={JSON.stringify({
+                                    order: data?.id,
+                                    lat: route?.lat,
+                                    lng: route?.lng,
+                                  })}
+                                  gallery={evidence||row?.evidences}
+                                  label="Subir evidencia"
+                                  setFormData={setInputs}
+                                />
                             )
+                            */
                           }
                           
 
