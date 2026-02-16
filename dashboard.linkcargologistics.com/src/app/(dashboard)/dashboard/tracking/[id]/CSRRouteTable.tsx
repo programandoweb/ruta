@@ -172,7 +172,7 @@ const CSRRouteTable = ({
                           {currentStatus === "Borrador" ? (
                             <>
                               {
-                                route?.delivery_day&&(
+                                !route?.delivery_day&&(
                                   <Link
                                     target="_blank"
                                     title="PDF"

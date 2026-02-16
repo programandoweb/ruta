@@ -3205,7 +3205,7 @@ EOT;
             }*/
 
             $prompt = <<<EOT
-            Actúa como experto en logística. Ordena estas paradas de forma eficiente de Roseville a Bakersfield.
+            Actúa como experto en logística. Ordena estas paradas de forma eficiente.
             INICIO: {$origin} | DESTINO: {$destination}
 
             REGLAS:
@@ -3214,7 +3214,6 @@ EOT;
             - Mantén guideNumber, cajas y phone_sender intactos.
             - SI lat o lng vienen en 0, null o no existen, DEBES geolocalizar la dirección y devolver lat y lng correctos.
             - NO devuelvas lat/lng en cero si la dirección es válida.
-
 
             FORMATO:
             [{"order":1,"address":"...","lat":0,"lng":0,"guideNumber":"...","cajas":[],"phone_sender":"...","pickup_day":1,"delivery_day":1}]
