@@ -105,3 +105,8 @@ php artisan make:model Routes -m
 php artisan make:model RouteItem -m
 php artisan make:model RouteAssignment -m
 php artisan make:controller V1/Routes/RoutesController --resource
+
+
+php artisan make:controller V1/Routes/RoutesGeoController --resource
+php artisan make:model RouteGeo -m
+php artisan make:model RouteCacheBackground -m

@@ -35,10 +35,10 @@ const CSRRouteFormComponent: React.FC<any> = () => {
   const [inputs, setInputs] = useState<any>({
     //date: "2025-10-18",
     date: today,
-    name: "Carlos Ramirez",
-    phone: "559-123-4567",
-    destination_address: "8861 Houghton Rd, Bakersfield, CA 93311, Estados Unidos",
-    origin_address:"QH9R+P9, Roseville, CA 95747, Estados Unidos",
+    name: "",
+    phone: "",
+    destination_address: "",
+    origin_address:"",
     type: "deliver",
   });
 

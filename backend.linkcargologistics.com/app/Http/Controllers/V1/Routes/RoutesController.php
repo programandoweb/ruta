@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use App\Jobs\GenerateRouteCacheJob;
 use App\Models\RouteAssignment;
-
+use App\Models\RouteCacheBackground;
 
 
 
@@ -3000,7 +3000,12 @@ EOT;
 }
 
 
-
+    private function getCachedGeosByGuides(array $guides): array
+    {
+        return RouteCacheBackground::whereIn('guide', $guides)
+            ->pluck('geo', 'guide')
+            ->toArray();
+    }
 
     
     public function setIaManualImport(Request $request, string $id)
@@ -3022,6 +3027,112 @@ EOT;
             $routes_ready = [];
             $addressList  = "";
 
+
+
+            /**
+             * ==========================================================
+             * 🔹 1. Obtener todas las guías del payload
+             * ==========================================================
+             */
+            $guides = collect($validated['packages'])
+                ->pluck('guideNumber')
+                ->filter()
+                ->values()
+                ->toArray();
+
+            /**
+             * 🔹 2. Traer cache en una sola consulta
+             */
+            $cachedGeos = RouteCacheBackground::whereIn('guide', $guides)
+                ->pluck('geo', 'guide')
+                ->toArray();
+
+            foreach ($validated['packages'] as $index => $value) {
+
+                $itemsSource = $value['items'] ?? $value['sender_location']['items'] ?? [];
+                $cajas       = [];
+
+                foreach ($itemsSource as $item) {
+                    if (!empty($item['size'])) {
+                        $cajas[] = $item['size'];
+                    }
+                }
+
+                $locationData  = $value['sender_location']['sender_location'] ?? $value['sender_location'] ?? [];
+                $formattedAddr = $value['sender_location']['sender_formatted_address']
+                                    ?? $value['address']
+                                    ?? 'Sin dirección';
+
+                $guideNumber  = $value['guideNumber'] ?? 'S/N';
+
+                $lat = (float) ($locationData['lat'] ?? 0);
+                $lng = (float) ($locationData['lng'] ?? 0);
+
+                /**
+                 * 🔥 Si payload no trae coordenadas válidas,
+                 * intentar resolver desde cache (si existe $cachedGeos)
+                 */
+                if (($lat == 0 || $lng == 0) && isset($cachedGeos[$guideNumber])) {
+                    $cached = $cachedGeos[$guideNumber];
+
+                    if (!empty($cached['lat']) && !empty($cached['lng'])) {
+                        $lat = (float) $cached['lat'];
+                        $lng = (float) $cached['lng'];
+                    }
+                }
+
+                $phoneSender  = $value['sender_location']['phone_sender'] ?? $value['phone_sender'] ?? 'N/A';
+                $pickupDay    = $value['sender_location']['pickup_day'] ?? $value['day'] ?? 1;
+                $deliveryDay  = $value['sender_location']['delivery_day'] ?? null;
+                $deposit      = $value['sender_location']['deposit'] ?? $value['deposit'] ?? 0;
+                $cost         = $value['sender_location']['cost'] ?? $value['cost'] ?? 0;
+
+                if ($deliveryDay) {
+                    $pickupDay = null;
+                }
+
+                if ($formattedAddr == 'Sin dirección') {
+                    $formattedAddr = $value["output_address"] ?? $formattedAddr;
+                }
+
+                $addressList .= ($index + 1) . ") - {$formattedAddr}"
+                    . " | guideNumber: {$guideNumber}"
+                    . " | cajas: " . json_encode($cajas)
+                    . " | type: " . ($value['type'] ?? 'pickup')
+                    . " | phone_sender: {$phoneSender}"
+                    . " | pickup_day: {$pickupDay}"
+                    . " | delivery_day: {$deliveryDay}"
+                    . " | deposit: {$deposit}"
+                    . " | cost: {$cost}"
+                    . " | Lat: {$lat}"
+                    . " | Lng: {$lng}\n";
+
+                $itemsParts = [];
+                foreach ($itemsSource as $k => $item) {
+                    $size = $item['size'] ?? 'Box';
+                    $itemsParts[] = "{$guideNumber}_{$size}" . ($k + 1) . "_MOV";
+                }
+
+                $routes_ready[] = [
+                    'order'        => $index + 1,
+                    'guide'        => $guideNumber,
+                    'address'      => $formattedAddr,
+                    'lat'          => $lat,
+                    'lng'          => $lng,
+                    'guide_items'  => implode(',', $itemsParts),
+                    'cajas'        => $cajas,
+                    'name'         => $value['name_sender'] ?? 'Cliente Movex',
+                    'phone'        => $phoneSender,
+                    'pickup_day'   => $pickupDay,
+                    'delivery_day' => $deliveryDay,
+                    'deposit'      => $deposit,
+                    'cost'         => $cost,
+                    'type'         => $value['type'] ?? 'pickup',
+                ];
+            }
+
+
+            /*
             foreach ($validated['packages'] as $index => $value) {
 
                 $itemsSource = $value['items'] ?? $value['sender_location']['items'] ?? [];
@@ -3090,7 +3201,7 @@ EOT;
                     'cost'         => $cost,
                     'type'         => $value['type'] ?? 'pickup',
                 ];
-            }
+            }*/
 
             $prompt = <<<EOT
             Actúa como experto en logística. Ordena estas paradas de forma eficiente de Roseville a Bakersfield.
