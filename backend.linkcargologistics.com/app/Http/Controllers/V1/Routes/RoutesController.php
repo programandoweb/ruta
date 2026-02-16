@@ -3048,7 +3048,7 @@ EOT;
                 ->toArray();
 
             foreach ($validated['packages'] as $index => $value) {
-
+                //p();
                 $itemsSource = $value['items'] ?? $value['sender_location']['items'] ?? [];
                 $cajas       = [];
 
@@ -3114,6 +3114,7 @@ EOT;
                 }
 
                 $routes_ready[] = [
+                    'observation_sender'=>$value["sender_location"]["observation_sender"]??"",
                     'order'        => $index + 1,
                     'guide'        => $guideNumber,
                     'address'      => $formattedAddr,
@@ -3273,12 +3274,15 @@ EOT;
             }
 
             foreach ($optimizedDataset as $iaRow) {
+                
                 $original = collect($routes_ready)->firstWhere('guide', $iaRow['guideNumber']);
                 $pkgOriginal = collect($request->packages)->first(function ($pkg) use ($iaRow) {
                     return
                         ($pkg['guideNumber'] ?? null) === $iaRow['guideNumber']
                         || ($pkg['sender_location']['guideNumber'] ?? null) === $iaRow['guideNumber'];
                 });
+
+                //p($original);
                 
                 if ($original) {
                     $iaRow['pickup_day']        =   (!empty($pkgOriginal["pickup_day"]) && empty($pkgOriginal['delivery_day']))?$pkgOriginal['pickup_day']:null;
@@ -3286,6 +3290,7 @@ EOT;
                     if($iaRow['delivery_day']){
                         $iaRow['pickup_day']    =   null;
                     }
+                    $iaRow['observation_sender']   =   $original['observation_sender'];
                     $iaRow['guide_items']   =   $original['guide_items'];
                     $iaRow['cost']          =   $original['cost'];
                     $iaRow['deposit']       =   $original['deposit'];

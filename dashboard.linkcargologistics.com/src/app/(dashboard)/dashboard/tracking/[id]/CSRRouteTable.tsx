@@ -66,7 +66,7 @@ const CSRRouteTable = ({
             const status        =   relatedItem?.json_status??{}
             //const res         =   route?.json_box_and_guide?.find((s:any)=>{return s.paymnent>=0})
             //const res2      =   route?.json_box_and_guide?.find((s:any)=>{return s.deposit>=0})
-            //console.log(route?.delivery_day)
+            console.log(route?.observation_sender)
             //console.log(route?.statuses)
             return (
               <tr key={route.order} className="hover:bg-gray-50 transition">
@@ -86,7 +86,8 @@ const CSRRouteTable = ({
                       <p><b>Depósito:</b> {formatearMonto(route.deposit)}</p>
                       <p><b>Teléfono:</b> {relatedItem.phone}</p>
                       <p className="">
-                        <b>Observación:</b> {relatedItem.observation}
+                        <b>Observación:</b> {route?.observation_sender??relatedItem.observation}
+                        
                       </p>
                       <p className="">
                         <b>Día:</b> {DAYS[relatedItem.day]}

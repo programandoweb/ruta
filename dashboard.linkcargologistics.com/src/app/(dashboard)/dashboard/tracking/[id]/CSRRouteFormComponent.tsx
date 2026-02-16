@@ -64,6 +64,8 @@ const CSRRouteFormComponent: React.FC<any> = () => {
             const dbMatch = data.items.find((it: any) => 
                it.origin_address === (route.address || route.origin_address)
             );
+
+            //console.log(route?.observation_sender)
             
             return {
               //samantha:dbMatch,
