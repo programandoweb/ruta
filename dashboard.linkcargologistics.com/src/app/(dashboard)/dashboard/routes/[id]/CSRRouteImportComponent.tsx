@@ -343,7 +343,7 @@ const CSRRouteImportComponent: React.FC<Props> = ({
             const itemsDetail = row.sender_location?.items ?? [];
             const result      =  pickup_day.find((s:any)=>{return s.value===row?.delivery_day||s.value===row?.pickup_day}) 
             const rel         =  assignments.find((s:any)=>{return s.guide===row?.guideNumber})??null
-            //console.log(row?.output_address) 
+            console.log(row?.sender_location?.observation_sender)  
             return (
               <div
                 key={idx}
@@ -379,6 +379,14 @@ const CSRRouteImportComponent: React.FC<Props> = ({
                       <p className="text-xs text-gray-600 mt-1">
                         📍 {row.address || row?.output_address}
                       </p>
+                      {
+                        row?.sender_location?.observation_sender&&(
+                          <p className="text-xs text-gray-900 mt-1">
+                            <b>Observación:</b> {row?.sender_location?.observation_sender}
+                          </p>
+                        )
+                      }
+                      
                     </div>
                   </div>
 
